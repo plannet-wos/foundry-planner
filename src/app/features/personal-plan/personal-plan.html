@@ -1,0 +1,97 @@
+<div class="plan-container">
+  <h2>My Personal Plan</h2>
+
+  <!-- ID lookup / active player banner -->
+  @if (activeId) {
+    <div class="player-banner">
+      <div class="player-banner__info">
+        <mat-icon>person</mat-icon>
+        <span class="player-banner__name">{{ playerName || activeId }}</span>
+        <span class="player-banner__id" *ngIf="playerName">({{ activeId }})</span>
+      </div>
+      <button mat-stroked-button color="warn" (click)="clearPlayer()">
+        <mat-icon>logout</mat-icon> Change Player
+      </button>
+    </div>
+  } @else {
+    <mat-card class="search-card">
+      <mat-card-content>
+        <div class="search-row">
+          <mat-form-field appearance="outline" [class.field-error]="searchError">
+            <mat-label>Enter your In-Game ID</mat-label>
+            <input matInput [(ngModel)]="searchId" (keyup.enter)="search()"
+                   (ngModelChange)="searchError = false" placeholder="e.g. 12345678">
+            <mat-error *ngIf="searchError">ID not found in this alliance</mat-error>
+          </mat-form-field>
+          <button mat-raised-button color="primary" (click)="search()" [disabled]="!searchId">View My Plan</button>
+        </div>
+        <div *ngIf="searchError" class="id-error">
+          <mat-icon>error_outline</mat-icon>
+          This ID is not registered in this alliance. Check your in-game ID and try again.
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- Battle info bar -->
+  @if (activeId) {
+    <ng-container *ngIf="battleInfo$ | async as info">
+      <div class="battle-info-bar">
+        <mat-icon>military_tech</mat-icon>
+        <span>Legion {{ info.legion }}</span>
+        <span class="battle-info-bar__sep">·</span>
+        <mat-icon>schedule</mat-icon>
+        <span>Battle time: <strong>{{ info.time }} UTC</strong></span>
+      </div>
+    </ng-container>
+  }
+
+  <!-- Phase toggle -->
+  @if (activeId) {
+    <div class="phase-toggle">
+      <mat-button-toggle-group [value]="personalPhase" (change)="setPersonalPhase($event.value)">
+        <mat-button-toggle [value]="1">Phase 1</mat-button-toggle>
+        <mat-button-toggle [value]="2">Phase 2</mat-button-toggle>
+      </mat-button-toggle-group>
+    </div>
+  }
+
+  <!-- Results -->
+  <ng-container *ngIf="personalAssignments$ | async as assignments">
+    <mat-card class="results-card">
+      <mat-card-header><mat-card-title>Your Assignments</mat-card-title></mat-card-header>
+      <mat-card-content>
+        <mat-list>
+          <mat-list-item *ngFor="let assign of assignments">
+            <span matListItemTitle>
+              <span class="color-dot" [style.background-color]="assign.taskColor"></span>
+              {{ assign.locationName }}
+            </span>
+            <span matListItemLine><strong>Role:</strong> {{ assign.taskName }}</span>
+            <span matListItemLine *ngIf="assign.taskDesc">{{ assign.taskDesc }}</span>
+          </mat-list-item>
+        </mat-list>
+        <div *ngIf="assignments.length === 0" class="empty-state">
+          No assignments scheduled for this phase.
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <div *ngIf="assignments.length > 0" class="map-panel personal-map">
+      <app-map-viewer>
+        <ng-container *ngFor="let assign of assignments">
+          <div *ngIf="assign.location?.type !== 'global'"
+               class="map-pin assigned"
+               [class.teleport]="assign.isTeleport"
+               [style.background-color]="assign.taskColor"
+               [style.left.%]="assign.location?.x"
+               [style.top.%]="assign.location?.y">
+            <div *ngIf="!assign.isTeleport" class="pin-tooltip pin-tooltip--always">
+              <div class="task-name">{{ assign.taskName }}</div>
+            </div>
+          </div>
+        </ng-container>
+      </app-map-viewer>
+    </div>
+  </ng-container>
+</div>

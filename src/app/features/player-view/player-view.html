@@ -1,0 +1,119 @@
+<div class="player-container">
+  <h2>{{ alliance?.name || 'Player Dashboard' }}</h2>
+
+  <mat-tab-group>
+    <!-- MY PLAN TAB -->
+    <mat-tab label="My Personal Plan">
+      <div class="tab-content">
+        <mat-card class="search-card">
+          <mat-card-content>
+            <div class="search-container">
+              <mat-form-field appearance="outline">
+                <mat-label>Enter your In-Game ID</mat-label>
+                <input matInput [(ngModel)]="searchId" (keyup.enter)="search()" placeholder="e.g. 12345678">
+              </mat-form-field>
+              <button mat-raised-button color="primary" (click)="search()" [disabled]="!searchId">View Tasks</button>
+            </div>
+            <div class="phase-toggle">
+              <mat-button-toggle-group [value]="personalPhase" (change)="setPersonalPhase($event.value)">
+                <mat-button-toggle [value]="1">Phase 1</mat-button-toggle>
+                <mat-button-toggle [value]="2">Phase 2</mat-button-toggle>
+              </mat-button-toggle-group>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <ng-container *ngIf="personalAssignments$ | async as assignments">
+          <mat-card class="results-card">
+            <mat-card-header><mat-card-title>Your Assignments</mat-card-title></mat-card-header>
+            <mat-card-content>
+              <mat-list>
+                <mat-list-item *ngFor="let assign of assignments">
+                  <span matListItemTitle>
+                    <span class="color-dot" [style.background-color]="assign.taskColor"></span>
+                    {{ assign.locationName }}
+                  </span>
+                  <span matListItemLine><strong>Role:</strong> {{ assign.taskName }}</span>
+                  <span matListItemLine *ngIf="assign.taskDesc">{{ assign.taskDesc }}</span>
+                </mat-list-item>
+              </mat-list>
+              <div *ngIf="assignments.length === 0" class="empty-state">
+                No assignments scheduled for this phase.
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <div *ngIf="assignments.length > 0" class="map-panel personal-map">
+            <div class="map-container">
+              <img src="/battlemap.webp" class="map-image" alt="Battle Map">
+              <div class="map-overlay">
+                <ng-container *ngFor="let assign of assignments">
+                  <div *ngIf="assign.location?.type !== 'global'"
+                       class="map-pin assigned"
+                       [style.background-color]="assign.taskColor"
+                       [style.left.%]="assign.location?.x"
+                       [style.top.%]="assign.location?.y">
+                    <div class="pin-tooltip pin-tooltip--always">
+                      <div class="task-name">{{ assign.taskName }}</div>
+                    </div>
+                  </div>
+                </ng-container>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+    </mat-tab>
+
+    <!-- GLOBAL MAP TAB -->
+    <mat-tab label="Global Map View">
+      <div class="tab-content">
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>Foundry Battle Map</mat-card-title>
+            <mat-card-subtitle>All assigned roles for the upcoming battle</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="map-controls">
+              <mat-button-toggle-group [value]="globalLegion" (change)="setGlobalLegion($event.value)">
+                <mat-button-toggle [value]="1">Legion 1</mat-button-toggle>
+                <mat-button-toggle [value]="2">Legion 2</mat-button-toggle>
+              </mat-button-toggle-group>
+              <mat-button-toggle-group [value]="globalPhase" (change)="setGlobalPhase($event.value)">
+                <mat-button-toggle [value]="1">Phase 1</mat-button-toggle>
+                <mat-button-toggle [value]="2">Phase 2</mat-button-toggle>
+              </mat-button-toggle-group>
+            </div>
+
+            <div class="map-panel">
+              <div class="map-container">
+                <img src="/battlemap.webp" class="map-image" alt="Battle Map">
+                <div class="map-overlay">
+                  <ng-container *ngIf="locationAssignments$ | async as locAssignments">
+                    <ng-container *ngFor="let item of locAssignments">
+                      <div *ngIf="item.location.type !== 'global'"
+                           class="map-pin"
+                           [class.outer]="item.location.type === 'outer'"
+                           [class.central]="item.location.type === 'central'"
+                           [class.gather]="item.location.type === 'workshop'"
+                           [class.assigned]="item.taskGroups.length > 0"
+                           [style.left.%]="item.location.x"
+                           [style.top.%]="item.location.y">
+                        <div class="pin-tooltip" *ngIf="item.taskGroups.length > 0">
+                          <div *ngFor="let group of item.taskGroups" class="task-group">
+                            <div class="task-name">{{ group.taskName }}</div>
+                            <div *ngFor="let player of group.players" class="player-entry">• {{ player }}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </ng-container>
+                  </ng-container>
+                </div>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</div>

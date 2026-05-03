@@ -1,0 +1,31 @@
+<div class="select-container">
+  <div class="select-heading">
+    <a class="back-link" routerLink="/">
+      <mat-icon>arrow_back</mat-icon>
+    </a>
+    <div>
+      <h1>Select Your Alliance</h1>
+      <p>Choose your alliance to view your battle plan</p>
+    </div>
+  </div>
+
+  <ng-container *ngIf="alliances$ | async as alliances">
+    <div class="alliance-grid" *ngIf="alliances.length > 0; else noAlliances">
+      <button
+        *ngFor="let alliance of alliances"
+        class="alliance-card"
+        (click)="select(alliance.id)">
+        <mat-icon class="alliance-card__icon">groups</mat-icon>
+        <span class="alliance-card__name">{{ alliance.name }}</span>
+        <mat-icon class="alliance-card__arrow">chevron_right</mat-icon>
+      </button>
+    </div>
+
+    <ng-template #noAlliances>
+      <div class="empty-state">
+        <mat-icon>info_outline</mat-icon>
+        <p>No alliances available yet.</p>
+      </div>
+    </ng-template>
+  </ng-container>
+</div>

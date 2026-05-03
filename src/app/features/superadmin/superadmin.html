@@ -1,0 +1,104 @@
+<div class="superadmin-container">
+  <div class="page-header">
+    <h2>Alliance Management</h2>
+    <button mat-stroked-button (click)="logout()">Logout</button>
+  </div>
+
+  <!-- Create Alliance -->
+  <mat-card class="create-card">
+    <mat-card-header>
+      <mat-card-title>Create New Alliance</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="create-form">
+        <mat-form-field appearance="outline">
+          <mat-label>Alliance Name</mat-label>
+          <input matInput [(ngModel)]="newAllianceName" placeholder="e.g. Phoenix" />
+          <mat-hint>Route: /alliance/{{ newAllianceSlug || '...' }}</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Admin Username</mat-label>
+          <input matInput [(ngModel)]="newAdminUsername" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Admin Password</mat-label>
+          <input matInput [(ngModel)]="newAdminPassword" />
+        </mat-form-field>
+        <button mat-flat-button color="primary" (click)="createAlliance()" [disabled]="!createFormValid || creating">
+          Create Alliance
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Existing Alliances -->
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Existing Alliances</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <ng-container *ngIf="alliances$ | async as alliances">
+        @if (alliances.length === 0) {
+          <p class="empty-state">No alliances yet.</p>
+        }
+        @for (alliance of alliances; track alliance.id) {
+          <div class="alliance-row">
+            <div class="alliance-info">
+              <span class="alliance-name">{{ alliance.name }}</span>
+              <span class="alliance-slug">/alliance/{{ alliance.id }}</span>
+            </div>
+            @if (pendingDeleteId === alliance.id) {
+              <div class="delete-confirm">
+                <span class="delete-label">Delete everything?</span>
+                <button mat-icon-button color="warn" (click)="confirmDelete(alliance)" title="Confirm"><mat-icon>check</mat-icon></button>
+                <button mat-icon-button (click)="cancelDelete()" title="Cancel"><mat-icon>close</mat-icon></button>
+              </div>
+            } @else {
+              <div class="alliance-actions">
+                <button mat-stroked-button (click)="navigateTo(alliance.id)">
+                  <mat-icon>dashboard</mat-icon> Open Dashboard
+                </button>
+                <button mat-icon-button color="warn" (click)="requestDelete(alliance.id)" title="Delete alliance">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            }
+          </div>
+          <mat-divider></mat-divider>
+        }
+      </ng-container>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Feedback -->
+  <mat-card class="feedback-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>rate_review</mat-icon> User Feedback
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <ng-container *ngIf="feedback$ | async as items">
+        @if (items.length === 0) {
+          <p class="empty-state">No feedback submitted yet.</p>
+        }
+        @for (item of items; track item.id) {
+          <div class="feedback-row">
+            <div class="feedback-meta">
+              <span class="feedback-type type-{{ item.type }}">{{ item.type }}</span>
+              <span class="feedback-page">{{ item.page }}</span>
+              <span class="feedback-date">{{ item.createdAt | date:'d MMM y, HH:mm' }}</span>
+              <button mat-icon-button color="warn" class="delete-btn"
+                      (click)="deleteFeedback(item.id)" title="Dismiss">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+            <p class="feedback-message">{{ item.message }}</p>
+          </div>
+          <mat-divider></mat-divider>
+        }
+      </ng-container>
+    </mat-card-content>
+  </mat-card>
+
+</div>

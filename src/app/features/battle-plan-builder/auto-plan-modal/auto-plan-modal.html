@@ -1,0 +1,110 @@
+<h2 mat-dialog-title>
+  <ng-container *ngIf="!result">Auto-create Plan — Legion {{ data.legion }}</ng-container>
+  <ng-container *ngIf="result">Generated Plan — Legion {{ data.legion }}</ng-container>
+</h2>
+
+<mat-dialog-content class="auto-plan-content">
+  <!-- ── Inputs view ─────────────────────────────────────────────────── -->
+  <ng-container *ngIf="!result">
+    <p class="hint">
+      Add rows per task. The order of rows sets priority — the first row gets the
+      highest-priority location. "Count" is how many locations this player covers
+      for that task.
+    </p>
+
+    <div *ngFor="let task of editableTasks; trackBy: trackByTaskId" class="task-block">
+      <div class="task-block__header">
+        <span class="color-dot" [style.background-color]="task.color || '#757575'"></span>
+        <span class="task-block__name">{{ task.name }}</span>
+        <span class="task-block__meta" *ngIf="task.maxPlayersPerLocation">
+          max {{ task.maxPlayersPerLocation }} / loc
+        </span>
+        <span class="task-block__meta" *ngIf="task.playerAtLocation">player at location</span>
+      </div>
+
+      <div *ngIf="rowsFor(task.id).length === 0" class="task-block__empty">No rows yet.</div>
+
+      <div *ngFor="let row of rowsFor(task.id); trackBy: trackByUid" class="row">
+        <mat-form-field appearance="outline" class="row__player">
+          <mat-label>Player</mat-label>
+          <mat-select [(ngModel)]="row.playerId" name="player_{{row.uid}}" (ngModelChange)="onRowChanged()">
+            <mat-option *ngFor="let p of data.players" [value]="p.id">
+              <span *ngIf="p.tier === 'whale'">🐋 </span><span *ngIf="p.tier === 'dolphin'">🐬 </span>{{ p.inGameName }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="row__count">
+          <mat-label>Count</mat-label>
+          <input matInput type="number" min="1" [(ngModel)]="row.count" name="count_{{row.uid}}" (ngModelChange)="onRowChanged()">
+        </mat-form-field>
+        <button mat-icon-button color="warn" (click)="removeRow(task.id, row.uid)" type="button">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
+
+      <button mat-stroked-button (click)="addRow(task.id)" type="button" class="add-row-btn">
+        <mat-icon>add</mat-icon> Add row
+      </button>
+    </div>
+  </ng-container>
+
+  <!-- ── Preview view ────────────────────────────────────────────────── -->
+  <ng-container *ngIf="result as r">
+    <div class="preview-summary">
+      <strong>{{ r.proposed.length }}</strong> assignment<span *ngIf="r.proposed.length !== 1">s</span> generated
+      <ng-container *ngIf="r.notPlaced.length > 0">
+        · <span class="warn">{{ r.notPlaced.length }} not placed</span>
+      </ng-container>
+    </div>
+
+    <div *ngFor="let phase of preview" class="preview-phase">
+      <h3 class="preview-phase__heading">Phase {{ phase.phase }}</h3>
+      <ng-container *ngIf="phase.taskGroups.length > 0; else emptyPhase">
+        <div *ngFor="let g of phase.taskGroups" class="preview-task-group">
+          <div class="preview-task-group__header">
+            <span class="color-dot"
+                  [class.color-dot--square]="g.isTeleport"
+                  [style.background-color]="g.taskColor"></span>
+            {{ g.taskName }}
+          </div>
+          <ul class="preview-task-group__items">
+            <li *ngFor="let item of g.items">
+              <strong>{{ item.playerName }}</strong>
+              <span class="preview-loc">{{ item.locationName }}</span>
+            </li>
+          </ul>
+        </div>
+      </ng-container>
+      <ng-template #emptyPhase>
+        <div class="empty-phase">No assignments.</div>
+      </ng-template>
+    </div>
+
+    <details *ngIf="r.notPlaced.length > 0" class="not-placed-section" open>
+      <summary><strong>Not placed</strong> ({{ r.notPlaced.length }})</summary>
+      <ul class="not-placed-list">
+        <li *ngFor="let np of r.notPlaced">
+          Phase {{ np.phase }}: <strong>{{ np.playerName }}</strong> — {{ np.taskName }}
+          <span class="reason">({{ np.reason }})</span>
+        </li>
+      </ul>
+    </details>
+  </ng-container>
+</mat-dialog-content>
+
+<!-- ── Action bars ────────────────────────────────────────────────────── -->
+<mat-dialog-actions align="end" *ngIf="!result">
+  <button mat-button (click)="cancel()" [disabled]="saving || generating">Cancel</button>
+  <button mat-button (click)="save()" [disabled]="saving || generating">
+    {{ saving ? 'Saving…' : 'Save' }}
+  </button>
+  <button mat-raised-button color="primary" (click)="generate()" [disabled]="saving || generating">
+    {{ generating ? 'Generating…' : 'Generate' }}
+  </button>
+</mat-dialog-actions>
+
+<mat-dialog-actions align="end" *ngIf="result">
+  <button mat-button (click)="cancel()">Cancel</button>
+  <button mat-stroked-button (click)="backToInputs()">← Back to inputs</button>
+  <button mat-raised-button color="primary" (click)="acceptPlan()">Accept Plan</button>
+</mat-dialog-actions>

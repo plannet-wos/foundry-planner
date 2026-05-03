@@ -1,0 +1,14 @@
+rules_version = '2';
+
+// Foundry Planner — alliance-trust model.
+// The app intentionally has no Firebase Auth (see CLAUDE.md). Access control
+// is enforced at the application layer; the data model is non-sensitive
+// (alliance roster + battle plans for a mobile game). Rules are open so the
+// client can read/write directly through the Firebase Web SDK.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

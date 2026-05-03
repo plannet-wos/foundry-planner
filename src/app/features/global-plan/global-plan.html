@@ -1,0 +1,76 @@
+<div class="global-container">
+  <h2>Global Plan</h2>
+
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Foundry Battle Map</mat-card-title>
+      <mat-card-subtitle>All assigned roles for the selected legion and phase</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="map-controls">
+        <mat-button-toggle-group [value]="globalLegion" (change)="setGlobalLegion($event.value)">
+          <mat-button-toggle [value]="1">Legion 1</mat-button-toggle>
+          <mat-button-toggle [value]="2">Legion 2</mat-button-toggle>
+        </mat-button-toggle-group>
+        <mat-button-toggle-group [value]="globalPhase" (change)="setGlobalPhase($event.value)">
+          <mat-button-toggle [value]="1">Phase 1</mat-button-toggle>
+          <mat-button-toggle [value]="2">Phase 2</mat-button-toggle>
+        </mat-button-toggle-group>
+      </div>
+
+      <div class="map-panel">
+        <app-map-viewer>
+          <ng-container *ngIf="locationAssignments$ | async as locAssignments">
+            <ng-container *ngFor="let item of locAssignments">
+              <div *ngIf="item.location.type !== 'global'"
+                   class="map-pin"
+                   [class.outer]="item.location.type === 'outer'"
+                   [class.central]="item.location.type === 'central'"
+                   [class.gather]="item.location.type === 'workshop'"
+                   [class.assigned]="item.taskGroups.length > 0"
+                   [class.has-teleport]="item.hasTeleport"
+                   [class.selected]="(selectedLocationId$ | async) === item.location.id"
+                   [style.left.%]="item.location.x"
+                   [style.top.%]="item.location.y"
+                   (click)="selectLocation(item.location.id)">
+                <div class="pin-tooltip" *ngIf="item.taskGroups.length > 0">
+                  <div *ngFor="let group of item.taskGroups" class="task-group">
+                    <div class="task-name">{{ group.taskName }}</div>
+                    <div *ngFor="let player of group.players" class="player-entry">• {{ player }}</div>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+          </ng-container>
+        </app-map-viewer>
+      </div>
+
+      <ng-container *ngIf="selectedLocationAssignments$ | async as sel">
+        <div class="location-detail">
+          <h3 class="location-detail__title">{{ sel.locationName }} — Legion {{ globalLegion }}</h3>
+          <div class="phase-columns">
+            <div *ngFor="let ph of sel.phases" class="phase-column">
+              <h3 class="phase-heading">Phase {{ ph.phase }}</h3>
+              <ng-container *ngIf="ph.taskGroups.length > 0; else emptyPhase">
+                <div *ngFor="let group of ph.taskGroups" class="task-group-block">
+                  <div class="task-group-header">
+                    <span class="color-dot" [style.background-color]="group.taskColor"></span>
+                    {{ group.taskName }}
+                  </div>
+                  <mat-list dense>
+                    <mat-list-item *ngFor="let name of group.players" class="player-row">
+                      <span matListItemTitle class="player-name">{{ name }}</span>
+                    </mat-list-item>
+                  </mat-list>
+                </div>
+              </ng-container>
+              <ng-template #emptyPhase>
+                <div class="empty-state">No assignments.</div>
+              </ng-template>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+    </mat-card-content>
+  </mat-card>
+</div>

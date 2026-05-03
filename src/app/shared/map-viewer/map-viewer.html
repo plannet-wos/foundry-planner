@@ -1,0 +1,22 @@
+<div class="map-viewer-wrapper" #wrapper [class.is-fullscreen]="isFullscreen()">
+  <div class="map-content" #content [style.transform]="transformStyle()">
+    <img [src]="src" class="map-img" draggable="false" alt="Battle Map">
+    <div class="map-overlay">
+      <ng-content></ng-content>
+    </div>
+  </div>
+
+  <div class="map-controls">
+    @if (scale() > 1) {
+      <button mat-mini-fab color="primary" class="ctrl-btn" (click)="resetZoom()" aria-label="Reset zoom">
+        <mat-icon>zoom_out_map</mat-icon>
+      </button>
+    }
+    @if (supportsFullscreen) {
+      <button mat-mini-fab color="primary" class="ctrl-btn" (click)="toggleFullscreen()"
+              [attr.aria-label]="isFullscreen() ? 'Exit fullscreen' : 'Fullscreen'">
+        <mat-icon>{{ isFullscreen() ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+      </button>
+    }
+  </div>
+</div>

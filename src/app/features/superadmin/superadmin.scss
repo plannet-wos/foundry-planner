@@ -1,0 +1,153 @@
+.superadmin-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  h2 { margin: 0; }
+}
+
+.create-card mat-card-content {
+  padding-top: 16px;
+}
+
+.create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 400px;
+}
+
+.alliance-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+}
+
+.alliance-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.alliance-name {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.alliance-slug {
+  font-size: 12px;
+  color: #888;
+}
+
+.alliance-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.delete-label {
+  font-size: 13px;
+  color: #f44336;
+  font-weight: 500;
+}
+
+.empty-state {
+  color: #888;
+  font-style: italic;
+  padding: 16px 0;
+}
+
+// ── Feedback ──────────────────────────────────────────────────────────────
+
+.feedback-card mat-card-header mat-icon {
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+.feedback-row {
+  padding: 14px 0 10px;
+}
+
+.feedback-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.feedback-type {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+
+  &.type-bug        { background: #fdecea; color: #c62828; }
+  &.type-suggestion { background: #fffde7; color: #f57f17; }
+  &.type-general    { background: #e8eaf6; color: #283593; }
+}
+
+.feedback-page {
+  font-size: 12px;
+  color: #888;
+  font-family: monospace;
+}
+
+.feedback-date {
+  font-size: 12px;
+  color: #aaa;
+  margin-left: auto;
+}
+
+.delete-btn {
+  width: 28px !important;
+  height: 28px !important;
+  line-height: 28px !important;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+}
+
+.feedback-message {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  color: #333;
+}
+
+@media (max-width: 600px) {
+  .superadmin-container { padding: 16px; }
+
+  .create-form { max-width: 100%; }
+
+  .alliance-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .alliance-actions,
+  .delete-confirm {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

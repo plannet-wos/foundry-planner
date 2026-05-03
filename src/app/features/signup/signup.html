@@ -1,0 +1,40 @@
+<div class="signup-container">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>{{ alliance?.name || 'Event' }} Registration</mat-card-title>
+      <mat-card-subtitle>Enter your details and select your available times</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form [formGroup]="signupForm" (ngSubmit)="onSubmit()" class="signup-form">
+        <mat-form-field appearance="outline">
+          <mat-label>In-Game Name</mat-label>
+          <input matInput formControlName="inGameName" placeholder="e.g. MasterChief" required>
+          <mat-error *ngIf="signupForm.get('inGameName')?.hasError('required')">Name is required</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>In-Game ID</mat-label>
+          <input matInput formControlName="inGameId" placeholder="e.g. 12345678" required>
+          <mat-error *ngIf="signupForm.get('inGameId')?.hasError('required')">ID is required</mat-error>
+          <mat-error *ngIf="signupForm.get('inGameId')?.hasError('pattern')">ID must be numeric</mat-error>
+        </mat-form-field>
+
+        <div class="availability-section" formGroupName="availability">
+          <h3>Available Times (UTC)</h3>
+          <div class="checkbox-group">
+            <mat-checkbox *ngFor="let slot of timeSlots" [formControlName]="slot.id">
+              {{ slot.label }}
+            </mat-checkbox>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button mat-raised-button color="primary" type="submit" [disabled]="!signupForm.valid">
+            Sign Up
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

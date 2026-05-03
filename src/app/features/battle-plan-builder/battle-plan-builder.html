@@ -1,0 +1,157 @@
+<div class="builder-container">
+  <div class="builder-header">
+    <div>
+      <h2>{{ alliance?.name || 'Plan Builder' }}</h2>
+      <mat-button-toggle-group [value]="currentLegion$ | async" (change)="setLegion($event.value)" class="legion-toggle">
+        <mat-button-toggle [value]="1">Legion 1</mat-button-toggle>
+        <mat-button-toggle [value]="2">Legion 2</mat-button-toggle>
+      </mat-button-toggle-group>
+    </div>
+    <div class="builder-header__actions">
+      <button mat-stroked-button (click)="openAutoPlan()">
+        <mat-icon>auto_fix_high</mat-icon>
+        Auto-create plan
+      </button>
+      <a mat-stroked-button [routerLink]="['/admin', allianceId]">← Roster</a>
+    </div>
+  </div>
+
+  <div class="map-layout">
+
+    <div class="assignment-panel">
+      <!-- Assign form -->
+      <mat-card>
+        <mat-card-header>
+          <mat-card-title>Assign Player — Legion {{ currentLegion$ | async }}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <form [formGroup]="assignmentForm" (ngSubmit)="createAssignment()" class="vertical-form">
+            <mat-form-field appearance="outline">
+              <mat-label>Phase</mat-label>
+              <mat-select formControlName="phase" required>
+                <mat-option value="both">Phase 1 &amp; 2</mat-option>
+                <mat-option [value]="1">Phase 1</mat-option>
+                <mat-option [value]="2">Phase 2</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Player</mat-label>
+              <mat-select formControlName="playerId" required>
+                <mat-option *ngFor="let player of filteredPlayers$ | async" [value]="player.id">
+                  {{ player.inGameName }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Location</mat-label>
+              <mat-select formControlName="locationId" required>
+                <mat-option *ngFor="let loc of filteredLocations$ | async" [value]="loc.id">
+                  {{ loc.name }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Task</mat-label>
+              <mat-select formControlName="taskId" required>
+                <mat-option *ngFor="let task of tasks$ | async" [value]="task.id">
+                  {{ task.name }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+            <button mat-raised-button color="accent" type="submit" [disabled]="assignmentForm.invalid">Assign</button>
+          </form>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Assignments list -->
+      <mat-card class="assignments-list">
+        <mat-card-header>
+          <mat-card-title>Assignments — Legion {{ currentLegion$ | async }}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-button-toggle-group [value]="groupBy$ | async" (change)="groupBy$.next($event.value)" class="group-toggle">
+            <mat-button-toggle value="location">By Location</mat-button-toggle>
+            <mat-button-toggle value="task">By Task</mat-button-toggle>
+            <mat-button-toggle value="player">By Player</mat-button-toggle>
+          </mat-button-toggle-group>
+          <ng-container *ngIf="groupedAssignments$ | async as groups">
+            <ng-container *ngIf="groups.length > 0; else emptyAssignments">
+              <div *ngFor="let group of groups" class="assignment-group">
+                <div class="group-header">
+                  <span *ngIf="group.groupColor" class="color-dot" [style.background-color]="group.groupColor"></span>
+                  {{ group.label }}
+                </div>
+                <mat-list dense>
+                  <mat-list-item *ngFor="let item of group.items">
+                    <span matListItemTitle>{{ item.title }}</span>
+                    <span matListItemLine>
+                      <span class="color-dot color-dot--sm" [style.background-color]="item.taskColor"></span>
+                      {{ item.subtitle }}
+                    </span>
+                    <button mat-icon-button color="warn" matListItemMeta (click)="deleteAssignment(item.id)">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </mat-list-item>
+                </mat-list>
+              </div>
+            </ng-container>
+            <ng-template #emptyAssignments>
+              <div class="empty-state">No assignments for Legion {{ currentLegion$ | async }} yet.</div>
+            </ng-template>
+          </ng-container>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Map -->
+    <div class="map-panel">
+      <app-map-viewer>
+        <ng-container *ngFor="let loc of locations">
+          <div *ngIf="loc.type !== 'global'"
+               class="map-pin"
+               [class.outer]="loc.type === 'outer'"
+               [class.central]="loc.type === 'central'"
+               [class.has-teleport]="(locationsWithTeleport$ | async)?.has(loc.id)"
+               [class.selected]="(selectedLocationId$ | async) === loc.id"
+               [style.left.%]="loc.x"
+               [style.top.%]="loc.y"
+               (click)="selectLocation(loc.id)">
+          </div>
+        </ng-container>
+      </app-map-viewer>
+
+      <mat-card *ngIf="selectedLocationAssignments$ | async as sel" class="location-detail">
+        <mat-card-header>
+          <mat-card-title>{{ sel.locationName }} — Legion {{ currentLegion$ | async }}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="phase-columns">
+            <div *ngFor="let ph of sel.phases" class="phase-column">
+              <h3 class="phase-heading">Phase {{ ph.phase }}</h3>
+              <ng-container *ngIf="ph.taskGroups.length > 0; else emptyPhase">
+                <div *ngFor="let group of ph.taskGroups" class="task-group-block">
+                  <div class="task-group-header">
+                    <span class="color-dot" [style.background-color]="group.taskColor"></span>
+                    {{ group.taskName }}
+                  </div>
+                  <mat-list dense>
+                    <mat-list-item *ngFor="let p of group.players" class="player-row">
+                      <span matListItemTitle class="player-name">{{ p.name }}</span>
+                      <button mat-icon-button color="warn" matListItemMeta (click)="deleteAssignment(p.id)">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </mat-list-item>
+                  </mat-list>
+                </div>
+              </ng-container>
+              <ng-template #emptyPhase>
+                <div class="empty-state">No assignments.</div>
+              </ng-template>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+  </div>
+</div>

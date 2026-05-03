@@ -1,0 +1,132 @@
+.admin-container {
+  padding: 24px;
+}
+
+.header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  gap: 24px;
+  flex-wrap: wrap;
+
+  h2 { margin: 0; }
+}
+
+.battle-times {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.battle-time-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.battle-time-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #555;
+}
+
+.battle-time-row {
+  mat-form-field {
+    width: 200px;
+    margin-bottom: -1.25em; // collapse mat-form-field bottom spacing
+  }
+}
+
+.time-conflict {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #d32f2f;
+  font-size: 13px;
+  font-weight: 500;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+}
+
+.roster-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.sort-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+}
+
+.roster-table {
+  width: 100%;
+}
+
+.status-indicator {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #f44336;
+
+  &.available {
+    background-color: #4caf50;
+  }
+}
+
+.mat-column-t2,
+.mat-column-t7,
+.mat-column-t12,
+.mat-column-t14,
+.mat-column-t19 {
+  width: 80px;
+  text-align: center;
+}
+
+.mat-column-legion {
+  width: 160px;
+}
+
+.mat-column-actions {
+  width: 96px;
+  text-align: right;
+}
+
+.delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+
+  &__label {
+    font-size: 12px;
+    color: #f44336;
+    font-weight: 500;
+  }
+}
+
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  .admin-container { padding: 16px; }
+
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .battle-times { align-items: stretch; }
+
+  .battle-time-row mat-form-field { width: 100%; }
+}
