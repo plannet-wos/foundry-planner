@@ -4,6 +4,7 @@ export interface Alliance {
   finalTime?: string;  // legacy — superseded by per-legion times below
   finalTimeL1?: string;
   finalTimeL2?: string;
+  isCrossAlliance?: boolean;  // true = uses players from other alliances
   createdAt: number;
 }
 

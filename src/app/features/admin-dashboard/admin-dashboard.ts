@@ -17,7 +17,7 @@ import { AllianceService } from '../../core/services/alliance.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Player, PlayerTier } from '../../core/models/player.model';
 import { Alliance } from '../../core/models/alliance.model';
-import { BehaviorSubject, combineLatest, Observable } from 'rxjs';
+import { BehaviorSubject, combineLatest, Observable, from } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { FormsModule } from '@angular/forms';
 import { EditPlayerDialog, EditPlayerDialogResult } from './edit-player-dialog';
@@ -58,12 +58,21 @@ export class AdminDashboard implements OnInit {
   pendingDeleteId: string | null = null;
 
   async ngOnInit() {
-    this.allianceId  = this.route.snapshot.paramMap.get('allianceId')!;
-    this.players$    = this.playerService.getPlayersByAlliance(this.allianceId);
+    this.allianceId = this.route.snapshot.paramMap.get('allianceId')!;
+    this.alliance   = await this.allianceService.getAlliance(this.allianceId);
+
+    // Load players based on alliance type
+    if (this.alliance?.isCrossAlliance) {
+      // Cross-alliance: load players from all other alliances
+      this.players$ = from(this.playerService.getPlayersFromOtherAlliances(this.allianceId));
+    } else {
+      // Normal alliance: load only players for this alliance
+      this.players$ = this.playerService.getPlayersByAlliance(this.allianceId);
+    }
+
     this.sortedPlayers$ = combineLatest([this.players$, this.sortKey]).pipe(
       map(([players, key]) => this.sortPlayers(players, key))
     );
-    this.alliance    = await this.allianceService.getAlliance(this.allianceId);
     this.finalTimeL1 = this.alliance?.finalTimeL1 ?? '';
     this.finalTimeL2 = this.alliance?.finalTimeL2 ?? '';
     this.timeConflict = this.checkConflict();
@@ -78,7 +87,10 @@ export class AdminDashboard implements OnInit {
         const v = String(l ?? 'unassigned');
         return v === '1' ? 0 : v === '2' ? 1 : 2;
       };
-      const diff = legionOrder(a.legion) - legionOrder(b.legion);
+      // Get the correct legion value for each player
+      const aLegion = this.alliance?.isCrossAlliance ? a.legionByAlliance?.[this.allianceId] : a.legion;
+      const bLegion = this.alliance?.isCrossAlliance ? b.legionByAlliance?.[this.allianceId] : b.legion;
+      const diff = legionOrder(aLegion) - legionOrder(bLegion);
       return diff !== 0 ? diff : a.inGameName.localeCompare(b.inGameName);
     });
   }
@@ -109,7 +121,13 @@ export class AdminDashboard implements OnInit {
     legion: 1 | 2 | 'unassigned'
   ) {
     try {
-      await this.playerService.updatePlayerLegion(playerId, legion);
+      // For cross-alliance events, use alliance-specific update
+      if (this.alliance?.isCrossAlliance) {
+        await this.playerService.updatePlayerLegionInAlliance(playerId, this.allianceId, legion);
+      } else {
+        await this.playerService.updatePlayerLegion(playerId, legion);
+      }
+
       // If the player was previously on a real legion (1 or 2) and that
       // legion has actually changed, scrub their stale assignments from
       // the legion they just left so they don't linger in personal /
@@ -130,7 +148,12 @@ export class AdminDashboard implements OnInit {
 
   async setTier(playerId: string, value: PlayerTier | 'none') {
     try {
-      await this.playerService.updatePlayerTier(playerId, value === 'none' ? null : value);
+      // For cross-alliance events, use alliance-specific update
+      if (this.alliance?.isCrossAlliance) {
+        await this.playerService.updatePlayerTierInAlliance(playerId, this.allianceId, value === 'none' ? null : value);
+      } else {
+        await this.playerService.updatePlayerTier(playerId, value === 'none' ? null : value);
+      }
     } catch (e) {
       console.error('Failed to update tier', e);
     }
@@ -159,12 +182,19 @@ export class AdminDashboard implements OnInit {
 
   async confirmDelete(player: Player) {
     try {
-      await Promise.all([
-        this.playerService.deletePlayer(player.id),
-        this.planService.deletePlayerAssignments(player.id, this.allianceId)
-      ]);
+      // For cross-alliance events, only delete assignments; don't delete the player record
+      if (this.alliance?.isCrossAlliance) {
+        await this.planService.deletePlayerAssignments(player.id, this.allianceId);
+        this.snackBar.open(`${player.inGameName} removed from event`, 'Close', { duration: 3000 });
+      } else {
+        // Normal alliance: delete both player and assignments
+        await Promise.all([
+          this.playerService.deletePlayer(player.id),
+          this.planService.deletePlayerAssignments(player.id, this.allianceId)
+        ]);
+        this.snackBar.open(`${player.inGameName} deleted`, 'Close', { duration: 3000 });
+      }
       this.pendingDeleteId = null;
-      this.snackBar.open(`${player.inGameName} deleted`, 'Close', { duration: 3000 });
     } catch (e) {
       this.snackBar.open('Failed to delete player', 'Close', { duration: 3000 });
     }
@@ -173,5 +203,21 @@ export class AdminDashboard implements OnInit {
   logout() {
     this.auth.logout();
     this.router.navigate(['/login']);
+  }
+
+  /** Get the effective league for a player in the current alliance context */
+  getPlayerLegion(player: Player): 1 | 2 | 'unassigned' {
+    if (this.alliance?.isCrossAlliance) {
+      return player.legionByAlliance?.[this.allianceId] ?? 'unassigned';
+    }
+    return player.legion ?? 'unassigned';
+  }
+
+  /** Get the effective tier for a player in the current alliance context */
+  getPlayerTier(player: Player): PlayerTier | undefined {
+    if (this.alliance?.isCrossAlliance) {
+      return player.tierByAlliance?.[this.allianceId];
+    }
+    return player.tier;
   }
 }

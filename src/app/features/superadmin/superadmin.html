@@ -46,6 +46,7 @@
             <div class="alliance-info">
               <span class="alliance-name">{{ alliance.name }}</span>
               <span class="alliance-slug">/alliance/{{ alliance.id }}</span>
+              <span *ngIf="alliance.isCrossAlliance" class="cross-alliance-badge">Cross-Alliance</span>
             </div>
             @if (pendingDeleteId === alliance.id) {
               <div class="delete-confirm">
@@ -55,6 +56,9 @@
               </div>
             } @else {
               <div class="alliance-actions">
+                <button mat-icon-button (click)="openEditAlliance(alliance)" [matTooltip]="'Edit alliance'" title="Edit">
+                  <mat-icon>edit</mat-icon>
+                </button>
                 <button mat-stroked-button (click)="navigateTo(alliance.id)">
                   <mat-icon>dashboard</mat-icon> Open Dashboard
                 </button>
@@ -67,38 +71,60 @@
           <mat-divider></mat-divider>
         }
       </ng-container>
-    </mat-card-content>
-  </mat-card>
+     </mat-card-content>
+   </mat-card>
 
-  <!-- Feedback -->
-  <mat-card class="feedback-card">
-    <mat-card-header>
-      <mat-card-title>
-        <mat-icon>rate_review</mat-icon> User Feedback
-      </mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <ng-container *ngIf="feedback$ | async as items">
-        @if (items.length === 0) {
-          <p class="empty-state">No feedback submitted yet.</p>
-        }
-        @for (item of items; track item.id) {
-          <div class="feedback-row">
-            <div class="feedback-meta">
-              <span class="feedback-type type-{{ item.type }}">{{ item.type }}</span>
-              <span class="feedback-page">{{ item.page }}</span>
-              <span class="feedback-date">{{ item.createdAt | date:'d MMM y, HH:mm' }}</span>
-              <button mat-icon-button color="warn" class="delete-btn"
-                      (click)="deleteFeedback(item.id)" title="Dismiss">
-                <mat-icon>close</mat-icon>
-              </button>
-            </div>
-            <p class="feedback-message">{{ item.message }}</p>
-          </div>
-          <mat-divider></mat-divider>
-        }
-      </ng-container>
-    </mat-card-content>
-  </mat-card>
+   <!-- Edit Alliance Modal -->
+   <mat-card *ngIf="editingAllianceId" class="edit-dialog">
+     <mat-card-header>
+       <mat-card-title>Edit Alliance</mat-card-title>
+     </mat-card-header>
+     <mat-card-content>
+       <mat-form-field appearance="outline" class="full-width">
+         <mat-label>Alliance Name</mat-label>
+         <input matInput [(ngModel)]="editingAllianceName">
+       </mat-form-field>
+       <mat-checkbox [(ngModel)]="editingIsCrossAlliance" class="checkbox">
+         Cross-Alliance Event (uses players from other alliances)
+       </mat-checkbox>
+     </mat-card-content>
+     <mat-card-actions>
+       <button mat-button (click)="cancelEdit()">Cancel</button>
+       <button mat-raised-button color="primary" (click)="saveAllianceEdit()" [disabled]="editingSaving">
+         Save
+       </button>
+     </mat-card-actions>
+   </mat-card>
 
-</div>
+   <!-- Feedback -->
+   <mat-card class="feedback-card">
+     <mat-card-header>
+       <mat-card-title>
+         <mat-icon>rate_review</mat-icon> User Feedback
+       </mat-card-title>
+     </mat-card-header>
+     <mat-card-content>
+       <ng-container *ngIf="feedback$ | async as items">
+         @if (items.length === 0) {
+           <p class="empty-state">No feedback submitted yet.</p>
+         }
+         @for (item of items; track item.id) {
+           <div class="feedback-row">
+             <div class="feedback-meta">
+               <span class="feedback-type type-{{ item.type }}">{{ item.type }}</span>
+               <span class="feedback-page">{{ item.page }}</span>
+               <span class="feedback-date">{{ item.createdAt | date:'d MMM y, HH:mm' }}</span>
+               <button mat-icon-button color="warn" class="delete-btn"
+                       (click)="deleteFeedback(item.id)" title="Dismiss">
+                 <mat-icon>close</mat-icon>
+               </button>
+             </div>
+             <p class="feedback-message">{{ item.message }}</p>
+           </div>
+           <mat-divider></mat-divider>
+         }
+       </ng-container>
+     </mat-card-content>
+   </mat-card>
+
+ </div>

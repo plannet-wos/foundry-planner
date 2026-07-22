@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -10,16 +10,16 @@ import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { AllianceService } from '../../core/services/alliance.service';
 import { FeedbackService } from '../../core/services/feedback.service';
 import { Feedback } from '../../core/models/feedback.model';
-import { PlayerService } from '../../core/services/player.service';
-import { PlanService } from '../../core/services/plan.service';
 import { AuthService } from '../../core/services/auth.service';
-import { Alliance, Account } from '../../core/models/alliance.model';
-import { getDocs, query, collection, where, getFirestore, deleteDoc } from '@angular/fire/firestore';
+import { Alliance } from '../../core/models/alliance.model';
+import { getDocs, query, collection, where, deleteDoc } from '@angular/fire/firestore';
 import { Firestore } from '@angular/fire/firestore';
 
 @Component({
@@ -29,15 +29,13 @@ import { Firestore } from '@angular/fire/firestore';
     CommonModule, FormsModule,
     MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatListModule,
-    MatSnackBarModule, MatDividerModule
+    MatSnackBarModule, MatDividerModule, MatCheckboxModule, MatTooltipModule
   ],
   templateUrl: './superadmin.html',
   styleUrl: './superadmin.scss'
 })
 export class SuperadminDashboard implements OnInit {
   private allianceService  = inject(AllianceService);
-  private playerService    = inject(PlayerService);
-  private planService      = inject(PlanService);
   private auth             = inject(AuthService);
   private snackBar         = inject(MatSnackBar);
   private router           = inject(Router);
@@ -52,6 +50,12 @@ export class SuperadminDashboard implements OnInit {
   newAdminUsername = '';
   newAdminPassword = '';
   creating = false;
+
+  // Edit form
+  editingAllianceId: string | null = null;
+  editingAllianceName = '';
+  editingIsCrossAlliance = false;
+  editingSaving = false;
 
   // Pending delete
   pendingDeleteId: string | null = null;
@@ -135,6 +139,33 @@ export class SuperadminDashboard implements OnInit {
 
   navigateTo(allianceId: string) {
     this.router.navigate(['/admin', allianceId]);
+  }
+
+  openEditAlliance(alliance: Alliance) {
+    this.editingAllianceId = alliance.id;
+    this.editingAllianceName = alliance.name;
+    this.editingIsCrossAlliance = alliance.isCrossAlliance ?? false;
+  }
+
+  cancelEdit() {
+    this.editingAllianceId = null;
+  }
+
+  async saveAllianceEdit() {
+    if (!this.editingAllianceId || !this.editingAllianceName.trim()) return;
+    this.editingSaving = true;
+    try {
+      await this.allianceService.updateAlliance(this.editingAllianceId, {
+        name: this.editingAllianceName.trim(),
+        isCrossAlliance: this.editingIsCrossAlliance
+      });
+      this.snackBar.open('Alliance updated', 'Close', { duration: 2000 });
+      this.editingAllianceId = null;
+    } catch (e) {
+      console.error(e);
+      this.snackBar.open('Failed to update alliance', 'Close', { duration: 3000 });
+    }
+    this.editingSaving = false;
   }
 
   logout() {

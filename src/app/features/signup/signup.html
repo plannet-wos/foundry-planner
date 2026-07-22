@@ -2,11 +2,13 @@
   <mat-card>
     <mat-card-header>
       <mat-card-title>{{ alliance?.name || 'Event' }} Registration</mat-card-title>
-      <mat-card-subtitle>Enter your details and select your available times</mat-card-subtitle>
+      <mat-card-subtitle *ngIf="!isCrossAlliance">Enter your details and select your available times</mat-card-subtitle>
+      <mat-card-subtitle *ngIf="isCrossAlliance">Players from participating alliances</mat-card-subtitle>
     </mat-card-header>
 
     <mat-card-content>
-      <form [formGroup]="signupForm" (ngSubmit)="onSubmit()" class="signup-form">
+      <!-- Regular signup form (hidden if cross-alliance) -->
+      <form *ngIf="!isCrossAlliance" [formGroup]="signupForm" (ngSubmit)="onSubmit()" class="signup-form">
         <mat-form-field appearance="outline">
           <mat-label>In-Game Name</mat-label>
           <input matInput formControlName="inGameName" placeholder="e.g. MasterChief" required>
@@ -35,6 +37,20 @@
           </button>
         </div>
       </form>
+
+      <!-- Cross-alliance player list (shown if cross-alliance) -->
+      <div *ngIf="isCrossAlliance" class="cross-alliance-players">
+        <div *ngIf="isLoadingPlayers" class="loading">Loading players...</div>
+        <div *ngIf="!isLoadingPlayers && availablePlayers.length === 0" class="no-players">
+          No players found from other alliances.
+        </div>
+        <mat-list *ngIf="!isLoadingPlayers && availablePlayers.length > 0">
+          <mat-list-item *ngFor="let player of availablePlayers">
+            <div matListItemTitle>{{ player.inGameName }}</div>
+            <div matListItemLine>{{ player.allianceId }} • ID: {{ player.id }}</div>
+          </mat-list-item>
+        </mat-list>
+      </div>
     </mat-card-content>
   </mat-card>
 </div>

@@ -8,6 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatListModule } from '@angular/material/list';
 import { PlayerService } from '../../core/services/player.service';
 import { AllianceService } from '../../core/services/alliance.service';
 import { Alliance } from '../../core/models/alliance.model';
@@ -21,7 +22,7 @@ export interface TimeSlot { id: string; label: string; }
   imports: [
     CommonModule, ReactiveFormsModule,
     MatCardModule, MatFormFieldModule, MatInputModule,
-    MatCheckboxModule, MatButtonModule, MatSnackBarModule
+    MatCheckboxModule, MatButtonModule, MatSnackBarModule, MatListModule
   ],
   templateUrl: './signup.html',
   styleUrl: './signup.scss'
@@ -35,6 +36,10 @@ export class Signup implements OnInit {
 
   allianceId!: string;
   alliance: Alliance | null = null;
+
+  isCrossAlliance = false;
+  availablePlayers: Player[] = [];
+  isLoadingPlayers = false;
 
   readonly timeSlots: TimeSlot[] = [
     { id: 'time_2',  label: '02:00 UTC' },
@@ -59,6 +64,19 @@ export class Signup implements OnInit {
   async ngOnInit() {
     this.allianceId = this.route.snapshot.paramMap.get('allianceId')!;
     this.alliance   = await this.allianceService.getAlliance(this.allianceId);
+
+    // Check if this is a cross-alliance event
+    if (this.alliance?.isCrossAlliance) {
+      this.isCrossAlliance = true;
+      this.isLoadingPlayers = true;
+      try {
+        this.availablePlayers = await this.playerService.getPlayersFromOtherAlliances(this.allianceId);
+      } catch (e) {
+        console.error('Failed to load players from other alliances', e);
+        this.snackBar.open('Failed to load player list', 'Close', { duration: 3000 });
+      }
+      this.isLoadingPlayers = false;
+    }
   }
 
   async onSubmit() {

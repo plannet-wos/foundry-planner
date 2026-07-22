@@ -102,7 +102,7 @@
           <th mat-header-cell *matHeaderCellDef>Tier</th>
           <td mat-cell *matCellDef="let player">
             <mat-button-toggle-group
-              [value]="player.tier || 'none'"
+              [value]="getPlayerTier(player) || 'none'"
               (change)="setTier(player.id, $event.value)">
               <mat-button-toggle value="whale" title="Whale — picks first">🐋</mat-button-toggle>
               <mat-button-toggle value="dolphin" title="Dolphin — picks after whales">🐬</mat-button-toggle>
@@ -116,8 +116,8 @@
           <th mat-header-cell *matHeaderCellDef>Legion</th>
           <td mat-cell *matCellDef="let player">
             <mat-button-toggle-group
-              [value]="player.legion || 'unassigned'"
-              (change)="setLegion(player.id, player.legion, $event.value)">
+              [value]="getPlayerLegion(player)"
+              (change)="setLegion(player.id, getPlayerLegion(player), $event.value)">
               <mat-button-toggle value="1">L1</mat-button-toggle>
               <mat-button-toggle value="2">L2</mat-button-toggle>
               <mat-button-toggle value="unassigned">—</mat-button-toggle>

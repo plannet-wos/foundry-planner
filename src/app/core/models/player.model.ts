@@ -17,5 +17,7 @@ export interface Player {
   availability: PlayerAvailability;
   legion?: 1 | 2 | 'unassigned';
   tier?: PlayerTier;   // omitted = no tier ("everyone else")
+  legionByAlliance?: { [allianceId: string]: 1 | 2 | 'unassigned' };  // For cross-alliance events
+  tierByAlliance?: { [allianceId: string]: PlayerTier };              // For cross-alliance events
   createdAt?: number;
 }

@@ -14,7 +14,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MapViewer } from '../../shared/map-viewer/map-viewer';
-import { Observable, combineLatest, BehaviorSubject, firstValueFrom } from 'rxjs';
+import { Observable, combineLatest, BehaviorSubject, firstValueFrom, from } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
 import { PlanService } from '../../core/services/plan.service';
 import { PlayerService } from '../../core/services/player.service';
@@ -100,7 +100,16 @@ export class BattlePlanBuilder implements OnInit {
     this.alliance   = await this.allianceService.getAlliance(this.allianceId);
 
     this.tasks$           = this.planService.getTasksByAlliance(this.allianceId);
-    this.players$         = this.playerService.getPlayersByAlliance(this.allianceId);
+
+    // Load players based on alliance type
+    if (this.alliance?.isCrossAlliance) {
+      // Cross-alliance: load players from all other alliances
+      this.players$ = from(this.playerService.getPlayersFromOtherAlliances(this.allianceId));
+    } else {
+      // Normal alliance: load only players for this alliance
+      this.players$ = this.playerService.getPlayersByAlliance(this.allianceId);
+    }
+
     this.allAssignments$  = this.planService.getAssignmentsByAlliance(this.allianceId);
 
     this.locationsWithTeleport$ = combineLatest([
@@ -117,10 +126,17 @@ export class BattlePlanBuilder implements OnInit {
     );
 
     this.filteredPlayers$ = combineLatest([this.players$, this.currentLegion$]).pipe(
-      map(([players, legion]) => players
-        .filter(p => Number(p.legion) === legion)
-        .sort((a, b) => a.inGameName.localeCompare(b.inGameName))
-      )
+      map(([players, legion]) => {
+        // Get the correct legion value for each player based on alliance type
+        return players
+          .filter(p => {
+            const playerLegion = this.alliance?.isCrossAlliance
+              ? p.legionByAlliance?.[this.allianceId]
+              : p.legion;
+            return Number(playerLegion) === legion;
+          })
+          .sort((a, b) => a.inGameName.localeCompare(b.inGameName));
+      })
     );
 
     this.currentLegion$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
