@@ -48,3 +48,6 @@ Thumbs.db
 
 # Claude Code local config
 .claude/
+
+# Service account credentials for diagnostic scripts (NEVER commit)
+scripts/.service-account.json

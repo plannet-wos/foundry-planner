@@ -1,14 +1,59 @@
 rules_version = '2';
 
-// Foundry Planner — alliance-trust model.
-// The app intentionally has no Firebase Auth (see CLAUDE.md). Access control
-// is enforced at the application layer; the data model is non-sensitive
-// (alliance roster + battle plans for a mobile game). Rules are open so the
-// client can read/write directly through the Firebase Web SDK.
+// This Firebase project (tal-coordinator) is shared between two apps:
+//   • Foundry Planner — alliance-trust model, no auth (see CLAUDE.md). Reads
+//     and writes are open on the collections it owns.
+//   • A separate "saves" app — public 4-char codes, immutable docs. Its
+//     security must NOT be relaxed; only specific creates are allowed.
+//
+// Anything not listed is default-denied so a third future app can't
+// accidentally inherit access.
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // --- Foundry Planner (open per CLAUDE.md) -------------------------
+    match /alliances/{id}        { allow read, write: if true; }
+    match /accounts/{id}         { allow read, write: if true; }
+    match /players/{id}          { allow read, write: if true; }
+    match /tasks/{id}            { allow read, write: if true; }
+    match /assignments/{id}      { allow read, write: if true; }
+    match /autoPlanConfigs/{id}  { allow read, write: if true; }
+    match /feedback/{id}         { allow read, write: if true; }
+
+    // --- Saves app (unchanged from previously-deployed ruleset) ------
+    match /saves/{code} {
+      // Reads are open — anyone with the 4-char code can load that save.
+      allow read: if true;
+
+      // Creates require:
+      //   • code-shaped document ID (4 chars, alphabet matches client)
+      //   • payload has the schema we expect (recommendations is OPTIONAL — old
+      //     saves without it still load, just with no cached cards)
+      //   • required fields are the right shape
+      //   • createdAt is the server timestamp (no client-set times)
+      allow create: if isValidCode(code)
+        && request.resource.data.keys().hasOnly(['v', 'heroes', 'gear', 'stats', 'recommendations', 'createdAt'])
+        && request.resource.data.keys().hasAll(['v', 'heroes', 'gear', 'stats', 'createdAt'])
+        && request.resource.data.v == 1
+        && request.resource.data.heroes is list
+        && request.resource.data.heroes.size() <= 32
+        && request.resource.data.gear is map
+        && request.resource.data.stats is map
+        && request.resource.data.createdAt == request.time;
+
+      // Saves are immutable — never let a client overwrite or delete a code
+      // that's already in use.
+      allow update, delete: if false;
+    }
+
+    // Default-deny everything else.
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
+}
+
+// 4-char codes from the alphabet 23456789ABCDEFGHJKMNPQRSTUVWXYZ.
+function isValidCode(code) {
+  return code.matches('^[2-9A-HJ-NP-Z]{4}$');
 }
