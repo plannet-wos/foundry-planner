@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatCardModule } from '@angular/material/card';
@@ -43,6 +43,7 @@ export class AdminDashboard implements OnInit {
   private dialog          = inject(MatDialog);
   private route           = inject(ActivatedRoute);
   private router          = inject(Router);
+  private cdr             = inject(ChangeDetectorRef);
 
   allianceId!: string;
   alliance: Alliance | null = null;
@@ -76,6 +77,10 @@ export class AdminDashboard implements OnInit {
     this.finalTimeL1 = this.alliance?.finalTimeL1 ?? '';
     this.finalTimeL2 = this.alliance?.finalTimeL2 ?? '';
     this.timeConflict = this.checkConflict();
+    // Zoneless: async ngOnInit resumes outside any CD trigger, so property
+    // assignments above don't repaint. Nudge CD so the async pipe subscribes
+    // to the freshly-assigned sortedPlayers$ immediately.
+    this.cdr.markForCheck();
   }
 
   private sortPlayers(players: Player[], key: 'name' | 'legion'): Player[] {
