@@ -1,8 +1,10 @@
 rules_version = '2';
 
-// This Firebase project (tal-coordinator) is shared between two apps:
+// This Firebase project (tal-coordinator) is shared between three apps:
 //   • Foundry Planner — alliance-trust model, no auth (see CLAUDE.md). Reads
 //     and writes are open on the collections it owns.
+//   • Alliance Wiki — same alliance-trust model (client-side admin password
+//     check, no Firebase Auth). Reads and writes are open on its collections.
 //   • A separate "saves" app — public 4-char codes, immutable docs. Its
 //     security must NOT be relaxed; only specific creates are allowed.
 //
@@ -19,6 +21,11 @@ service cloud.firestore {
     match /assignments/{id}      { allow read, write: if true; }
     match /autoPlanConfigs/{id}  { allow read, write: if true; }
     match /feedback/{id}         { allow read, write: if true; }
+
+    // --- Alliance Wiki (open, same trust model) -----------------------
+    match /wiki_articles/{id}     { allow read, write: if true; }
+    match /article_feedback/{id}  { allow read, write: if true; }
+    match /admin_feedback/{id}    { allow read, write: if true; }
 
     // --- Saves app (unchanged from previously-deployed ruleset) ------
     match /saves/{code} {
