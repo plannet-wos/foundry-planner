@@ -15,16 +15,78 @@ service cloud.firestore {
 
     // --- Foundry Planner (open per CLAUDE.md) -------------------------
     match /alliances/{id}        { allow read, write: if true; }
-    match /accounts/{id}         { allow read, write: if true; }
     match /players/{id}          { allow read, write: if true; }
     match /tasks/{id}            { allow read, write: if true; }
     match /assignments/{id}      { allow read, write: if true; }
     match /autoPlanConfigs/{id}  { allow read, write: if true; }
     match /feedback/{id}         { allow read, write: if true; }
 
-    // --- Alliance Wiki (open, same trust model) -----------------------
-    match /wiki_articles/{id}     { allow read, write: if true; }
-    match /article_feedback/{id}  { allow read, write: if true; }
+    // --- accounts (shared by both apps' admin/superadmin logins) ------
+    // Credentials used to be plaintext-readable by anyone — this closes
+    // that. There's no backend here (Cloud Functions need the paid Blaze
+    // plan, which this project intentionally avoids), so "login" can't be
+    // a server-verified read; instead it's a write that only succeeds if
+    // every field — crucially the password hash — already matches exactly.
+    // See password.util.ts in both apps for the hashing scheme, and
+    // auth.service.ts / article.service.ts for how login calls this.
+    //
+    // Reads are fully blocked: nobody, including the apps themselves, ever
+    // queries this collection directly again.
+    //
+    // Creates are fully blocked too: provisioning a new alliance's admin
+    // account is a manual/elevated step now, not self-service from the
+    // superadmin dashboard (see superadmin.ts).
+    //
+    // Deletes stay open — a delete carries no payload for a rule to check
+    // against, so there's no way to gate it on a password proof at all.
+    // Accepted as a low-stakes gap: worst case an account doc is deleted
+    // and has to be manually recreated.
+    //
+    // Updates must touch nothing but `lastLoginAt` (a server timestamp) —
+    // resupplying every other field (username, allianceId/role,
+    // passwordHash) exactly as stored is what proves the caller knows the
+    // current password. Any mismatch (wrong password → wrong hash, wrong
+    // alliance, wrong username) makes the diff include more than just
+    // `lastLoginAt`, and the whole write is rejected.
+    match /accounts/{username} {
+      allow read: if false;
+      allow create: if false;
+      allow delete: if true;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastLoginAt'])
+                    && request.resource.data.lastLoginAt == request.time;
+    }
+
+    // --- Alliance Wiki ------------------------------------------------
+    // Who can publish/edit/delete an article can't be enforced here without
+    // real Auth: the wiki must stay publicly readable, and any "proof of
+    // adminship" a write could carry would become part of that same public
+    // document — copyable by anyone who ever sees one legitimate edit, not
+    // just leaked once. That's a deliberate, accepted trade-off (see the
+    // security-hardening plan this was designed against), not an oversight.
+    // What IS worth enforcing: basic shape, so a stray or malicious script
+    // can't corrupt content with garbage/oversized payloads.
+    match /wiki_articles/{id} {
+      allow read: if true;
+      allow create, update: if request.resource.data.keys().hasAll(['allianceId', 'title', 'content', 'status', 'createdAt', 'updatedAt'])
+        && request.resource.data.status in ['published', 'draft']
+        && request.resource.data.title is string && request.resource.data.title.size() <= 200
+        && request.resource.data.content is string && request.resource.data.content.size() <= 300000
+        && request.resource.data.allianceId is string;
+      allow delete: if true;
+    }
+    match /article_feedback/{id} {
+      allow read: if true;
+      allow create, update: if request.resource.data.keys().hasAll(['articleId', 'allianceId', 'content', 'createdAt'])
+        && request.resource.data.content is string && request.resource.data.content.size() <= 5000;
+      allow delete: if true;
+    }
+    // admin_feedback left open (allow read, write: if true) — reads can't
+    // be gated on a password proof at all (a read carries no payload for a
+    // rule to check), so this was always going to be either fully open or
+    // fully closed with the in-app viewer removed. Kept open by explicit
+    // choice: the submit form's "only the superadmin sees this" promise
+    // isn't literally true, but the alternative (dropping the feature)
+    // wasn't worth it for a low-stakes feedback inbox.
     match /admin_feedback/{id}    { allow read, write: if true; }
 
     // --- Saves app (unchanged from previously-deployed ruleset) ------

@@ -17,11 +17,11 @@
           <mat-hint>Route: /alliance/{{ newAllianceSlug || '...' }}</mat-hint>
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Admin Username</mat-label>
+          <mat-label>Admin Username (provisioned manually after)</mat-label>
           <input matInput [(ngModel)]="newAdminUsername" />
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Admin Password</mat-label>
+          <mat-label>Admin Password (provisioned manually after)</mat-label>
           <input matInput [(ngModel)]="newAdminPassword" />
         </mat-form-field>
         <button mat-flat-button color="primary" (click)="createAlliance()" [disabled]="!createFormValid || creating">

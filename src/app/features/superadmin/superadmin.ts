@@ -89,13 +89,15 @@ export class SuperadminDashboard implements OnInit {
         name: this.newAllianceName.trim(),
         createdAt: Date.now()
       });
-      await this.allianceService.saveAccount({
-        id: this.newAdminUsername.trim(),
-        username: this.newAdminUsername.trim(),
-        password: this.newAdminPassword.trim(),
-        allianceId: slug
-      });
-      this.snackBar.open(`Alliance "${this.newAllianceName.trim()}" created`, 'Close', { duration: 3000 });
+      // Admin accounts are no longer self-service (accounts.create is
+      // locked down — see firestore.rules). Surface exactly what to
+      // provision manually instead of silently failing to write it.
+      this.snackBar.open(
+        `Alliance "${this.newAllianceName.trim()}" created. Now provision its admin account manually ` +
+        `(username "${this.newAdminUsername.trim()}", alliance "${slug}") — ask for it, or add it via the Firebase console.`,
+        'Close',
+        { duration: 10000 }
+      );
       this.newAllianceName = '';
       this.newAdminUsername = '';
       this.newAdminPassword = '';
@@ -116,7 +118,10 @@ export class SuperadminDashboard implements OnInit {
 
   async confirmDelete(alliance: Alliance) {
     try {
-      // Delete alliance doc, admin accounts, players, tasks, assignments
+      // Delete alliance doc, players, tasks, assignments. Admin accounts for
+      // this alliance are NOT cleaned up here anymore — `accounts` is
+      // unreadable, so there's no way to even find which docs belong to
+      // this alliance from the client. Removing them is a manual step now.
       const playersSnap = await getDocs(query(collection(this.firestore, 'players'), where('allianceId', '==', alliance.id)));
       const tasksSnap   = await getDocs(query(collection(this.firestore, 'tasks'),   where('allianceId', '==', alliance.id)));
       const assignSnap  = await getDocs(query(collection(this.firestore, 'assignments'), where('allianceId', '==', alliance.id)));
@@ -125,12 +130,11 @@ export class SuperadminDashboard implements OnInit {
         ...playersSnap.docs.map(d => deleteDoc(d.ref)),
         ...tasksSnap.docs.map(d => deleteDoc(d.ref)),
         ...assignSnap.docs.map(d => deleteDoc(d.ref)),
-        this.allianceService.deleteAccountsByAlliance(alliance.id),
         this.allianceService.deleteAlliance(alliance.id),
       ]);
 
       this.pendingDeleteId = null;
-      this.snackBar.open(`"${alliance.name}" and all its data deleted`, 'Close', { duration: 3000 });
+      this.snackBar.open(`"${alliance.name}" deleted. Remove its admin account manually too.`, 'Close', { duration: 6000 });
     } catch (e) {
       console.error(e);
       this.snackBar.open('Failed to delete alliance', 'Close', { duration: 3000 });
