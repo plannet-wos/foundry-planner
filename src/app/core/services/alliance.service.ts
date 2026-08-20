@@ -1,13 +1,19 @@
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, collectionData, doc, setDoc, deleteDoc, getDoc, getDocs, query, where } from '@angular/fire/firestore';
+import { Firestore, collection, collectionData, doc, setDoc, deleteDoc, getDoc } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
-import { Alliance, Account } from '../models/alliance.model';
+import { Alliance } from '../models/alliance.model';
+
+// Account management (create/read/delete of the `accounts` collection) no
+// longer lives here — `accounts` is fully unreadable and its create/update
+// are gated by a password-hash proof (see firestore.rules), so it can't be
+// managed self-service from this dashboard anymore. Provisioning and
+// removing admin accounts is now a manual/elevated step (Firebase console,
+// or ask for it). See CLAUDE.md.
 
 @Injectable({ providedIn: 'root' })
 export class AllianceService {
   private firestore = inject(Firestore);
   private alliancesCol = collection(this.firestore, 'alliances');
-  private accountsCol  = collection(this.firestore, 'accounts');
 
   getAlliances(): Observable<Alliance[]> {
     return collectionData(this.alliancesCol, { idField: 'id' }) as Observable<Alliance[]>;
@@ -28,23 +34,6 @@ export class AllianceService {
 
   async deleteAlliance(allianceId: string): Promise<void> {
     await deleteDoc(doc(this.firestore, `alliances/${allianceId}`));
-  }
-
-  // Accounts
-  getAccountsByAlliance(allianceId: string): Observable<Account[]> {
-    return collectionData(
-      query(this.accountsCol, where('allianceId', '==', allianceId)),
-      { idField: 'id' }
-    ) as Observable<Account[]>;
-  }
-
-  async saveAccount(account: Account): Promise<void> {
-    await setDoc(doc(this.firestore, `accounts/${account.id}`), account, { merge: true });
-  }
-
-  async deleteAccountsByAlliance(allianceId: string): Promise<void> {
-    const snap = await getDocs(query(this.accountsCol, where('allianceId', '==', allianceId)));
-    await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
   }
 
   /** Derive a URL-safe slug from a display name */

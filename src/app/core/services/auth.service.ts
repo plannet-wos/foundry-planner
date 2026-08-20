@@ -1,9 +1,8 @@
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, query, where, getDocs } from '@angular/fire/firestore';
+import { Firestore, doc, setDoc, serverTimestamp } from '@angular/fire/firestore';
+import { deriveSaltHex, hashPassword, withLoginTimeout } from '../utils/password.util';
 
 const SESSION_KEY = 'plannet_session';
-const SUPERADMIN_USERNAME = 'superadmin';
-const SUPERADMIN_PASSWORD = '3038';
 
 export interface AdminSession {
   role: 'superadmin' | 'admin';
@@ -35,27 +34,52 @@ export class AuthService {
     } catch { /* ignore invalid tokens */ }
   }
 
-  async login(username: string, password: string): Promise<'superadmin' | 'admin' | null> {
-    // Superadmin — hardcoded
-    if (username === SUPERADMIN_USERNAME && password === SUPERADMIN_PASSWORD) {
+  // Accounts are unreadable by design (see firestore.rules) — there's no
+  // backend here to check credentials out-of-band, so "login" is an
+  // attempted write that only succeeds if every field, crucially including
+  // passwordHash, exactly matches what's already stored (Firestore rules
+  // require the write to touch nothing but `lastLoginAt`). Get the password,
+  // username, or alliance wrong and the whole write is rejected — that
+  // rejection is what "incorrect credentials" means here. This replaces the
+  // old hardcoded superadmin check and the plaintext Firestore query alike.
+  //
+  // `allianceId` selects which path to try: the app can no longer discover
+  // it by reading the account, so the caller asserts it via the login
+  // page's alliance selector. Leaving it blank means "I'm the superadmin" —
+  // only one path is ever attempted, never both, because a rejected write
+  // takes much longer to fail than a successful one (see withLoginTimeout);
+  // trying both unconditionally would add that whole delay to every normal
+  // alliance-admin login.
+  async login(username: string, password: string, allianceId?: string): Promise<'superadmin' | 'admin' | null> {
+    if (allianceId) {
+      if (await this.tryVerifyingWrite(username, password, { allianceId })) {
+        this.setSession({ role: 'admin', username, allianceId });
+        return 'admin';
+      }
+      return null;
+    }
+
+    if (await this.tryVerifyingWrite(username, password, { role: 'superadmin' })) {
       this.setSession({ role: 'superadmin', username });
       return 'superadmin';
     }
-
-    // Alliance admin — stored in Firestore
-    const q = query(
-      collection(this.firestore, 'accounts'),
-      where('username', '==', username),
-      where('password', '==', password)
-    );
-    const snap = await getDocs(q);
-    if (!snap.empty) {
-      const data = snap.docs[0].data();
-      this.setSession({ role: 'admin', username, allianceId: data['allianceId'] });
-      return 'admin';
-    }
-
     return null;
+  }
+
+  private async tryVerifyingWrite(username: string, password: string, extra: Record<string, unknown>): Promise<boolean> {
+    try {
+      const passwordHash = await hashPassword(password, await deriveSaltHex(username));
+      await withLoginTimeout(setDoc(doc(this.firestore, `accounts/${username}`), {
+        id: username,
+        username,
+        ...extra,
+        passwordHash,
+        lastLoginAt: serverTimestamp()
+      }));
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private setSession(session: AdminSession): void {
