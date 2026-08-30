@@ -1,15 +1,25 @@
 rules_version = '2';
 
-// This Firebase project (tal-coordinator) is shared between three apps:
+// This Firebase project (tal-coordinator) is shared between four apps:
 //   • Foundry Planner — alliance-trust model, no auth (see CLAUDE.md). Reads
 //     and writes are open on the collections it owns.
 //   • Alliance Wiki — same alliance-trust model (client-side admin password
 //     check, no Firebase Auth). Reads and writes are open on its collections.
+//   • SvS Preparation — same alliance-trust model. One open `svs_submissions`
+//     doc per player ID (the SvS prep survey, replacing the old Google Form).
 //   • A separate "saves" app — public 4-char codes, immutable docs. Its
 //     security must NOT be relaxed; only specific creates are allowed.
 //
-// Anything not listed is default-denied so a third future app can't
-// accidentally inherit access.
+// This file is the source of truth and lives in each app's repo as a
+// convenience copy — but Firestore rules are project-wide, not per-app, so
+// only ONE of these copies is ever actually deployed at a time. Whichever
+// app repo last ran `firebase deploy --only firestore:rules` here has the
+// live version; keep every app's local copy in sync with this one when you
+// add a collection, or a stale deploy from another repo will default-deny
+// collections it doesn't know about.
+//
+// Anything not listed is default-denied so a future app can't accidentally
+// inherit access.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -88,6 +98,22 @@ service cloud.firestore {
     // isn't literally true, but the alternative (dropping the feature)
     // wasn't worth it for a low-stakes feedback inbox.
     match /admin_feedback/{id}    { allow read, write: if true; }
+
+    // --- SvS Preparation (open, alliance-trust — same model as above) --
+    // One doc per player ID (doc ID == the form's "player ID" answer,
+    // trimmed). A resubmission overwrites the existing doc for that player
+    // — see svs-submission.service.ts. Reads are open so the app can look
+    // up an existing submission before showing the "you already submitted"
+    // diff prompt. Basic shape check only (no real auth possible without a
+    // backend, same trade-off as wiki_articles above).
+    match /svs_submissions/{playerId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.playerId == playerId
+        && request.resource.data.allianceAndName is string
+        && request.resource.data.allianceAndName.size() > 0
+        && request.resource.data.allianceAndName.size() <= 200;
+      allow delete: if true;
+    }
 
     // --- Saves app (unchanged from previously-deployed ruleset) ------
     match /saves/{code} {
