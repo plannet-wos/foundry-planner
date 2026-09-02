@@ -26,6 +26,21 @@
   max-width: 400px;
 }
 
+.create-event-card .hint {
+  margin-top: 0;
+}
+
+.create-event-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+
+  mat-form-field { flex: 1 1 180px; }
+
+  button { margin-top: 8px; }
+}
+
 .alliance-row {
   display: flex;
   justify-content: space-between;

@@ -68,14 +68,14 @@ export class Signup implements OnInit {
     );
     this.alliance   = await this.allianceService.getAlliance(this.allianceId);
 
-    // Check if this is a cross-alliance event
-    if (this.alliance?.isCrossAlliance) {
+    // Check if this is a state event (its own roster is every real alliance in the state)
+    if (this.alliance?.type === 'state_event') {
       this.isCrossAlliance = true;
       this.isLoadingPlayers = true;
       try {
-        this.availablePlayers = await this.playerService.getPlayersFromOtherAlliances(this.allianceId);
+        this.availablePlayers = await this.playerService.getPlayersForStateEvent(this.alliance.stateId, this.allianceId);
       } catch (e) {
-        console.error('Failed to load players from other alliances', e);
+        console.error('Failed to load players for state event', e);
         this.snackBar.open('Failed to load player list', 'Close', { duration: 3000 });
       }
       this.isLoadingPlayers = false;

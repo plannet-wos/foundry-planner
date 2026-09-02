@@ -3,10 +3,20 @@ export interface Alliance {
   stateId: string;
   slug: string;        // the bare, human-readable part used in routes, e.g. "eagle"
   name: string;
+  /**
+   * Absent (or 'alliance') = a normal alliance. 'state_event' = a state-wide event shell —
+   * a battle-plan built for a state-wide event, whose player roster is every real alliance
+   * in the same state rather than its own signups (there are none — signup.html hides the
+   * registration form for these). Replaces the old isCrossAlliance boolean, which had no
+   * creation UI (set by hand in Firestore) and whose player query
+   * (PlayerService.getPlayersFromOtherAlliances) had no state scoping at all — see the
+   * multi-state rollout plan for why that became a real cross-state leak once other states
+   * existed. See PlayerService.getPlayersForStateEvent() for the replacement.
+   */
+  type?: 'alliance' | 'state_event';
   finalTime?: string;  // legacy — superseded by per-legion times below
   finalTimeL1?: string;
   finalTimeL2?: string;
-  isCrossAlliance?: boolean;  // true = uses players from other alliances
   createdAt: number;
 }
 

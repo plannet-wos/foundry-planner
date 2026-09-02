@@ -13,7 +13,7 @@ import { MatListModule } from '@angular/material/list';
 import { MapViewer } from '../../shared/map-viewer/map-viewer';
 import { AllianceService } from '../../core/services/alliance.service';
 import { Alliance, allianceId as resolveAllianceId } from '../../core/models/alliance.model';
-import { Observable, combineLatest, BehaviorSubject } from 'rxjs';
+import { Observable, combineLatest, BehaviorSubject, from } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { PlanService } from '../../core/services/plan.service';
 import { PlayerService } from '../../core/services/player.service';
@@ -73,16 +73,25 @@ export class PersonalPlan implements OnInit {
     );
     this.assignments$ = this.planService.getAssignmentsByAlliance(allianceId);
     this.tasks$       = this.planService.getTasksByAlliance(allianceId);
-    this.players$     = this.playerService.getPlayersByAlliance(allianceId);
 
     this.alliance = await this.allianceService.getAlliance(allianceId);
+
+    // A state-event shell has no signups of its own — its roster is every real
+    // alliance's players in the same state. See admin-dashboard.ts for the same split.
+    this.players$ = this.alliance?.type === 'state_event'
+      ? from(this.playerService.getPlayersForStateEvent(this.alliance.stateId, allianceId))
+      : this.playerService.getPlayersByAlliance(allianceId);
 
     this.battleInfo$ = combineLatest([this.players$, this.searchId$]).pipe(
       map(([players, id]) => {
         if (!id || !this.alliance) return null;
         const player = players.find(p => p.id === id);
-        if (!player || !player.legion || player.legion === 'unassigned') return null;
-        const legionNum = Number(player.legion);
+        if (!player) return null;
+        const legion = this.alliance.type === 'state_event'
+          ? player.legionByAlliance?.[allianceId]
+          : player.legion;
+        if (!legion || legion === 'unassigned') return null;
+        const legionNum = Number(legion);
         if (legionNum !== 1 && legionNum !== 2) return null;
         const time = legionNum === 1
           ? this.alliance.finalTimeL1

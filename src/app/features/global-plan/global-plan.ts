@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -8,10 +8,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MapViewer } from '../../shared/map-viewer/map-viewer';
 import { allianceId as resolveAllianceId } from '../../core/models/alliance.model';
-import { Observable, combineLatest, BehaviorSubject } from 'rxjs';
+import { Observable, combineLatest, BehaviorSubject, from } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { PlanService } from '../../core/services/plan.service';
 import { PlayerService } from '../../core/services/player.service';
+import { AllianceService } from '../../core/services/alliance.service';
 import { Assignment, MapLocation, TaskTemplate } from '../../core/models/plan.model';
 import { Player } from '../../core/models/player.model';
 
@@ -23,9 +24,11 @@ import { Player } from '../../core/models/player.model';
   styleUrl: './global-plan.scss'
 })
 export class GlobalPlan implements OnInit {
-  private planService   = inject(PlanService);
-  private playerService = inject(PlayerService);
-  private route         = inject(ActivatedRoute);
+  private planService     = inject(PlanService);
+  private playerService   = inject(PlayerService);
+  private allianceService = inject(AllianceService);
+  private route           = inject(ActivatedRoute);
+  private cdr             = inject(ChangeDetectorRef);
 
   private readonly PHASE_1_LOCKED = new Set([
     'loc_mercenary', 'loc_forge', 'loc_munitions',
@@ -51,14 +54,20 @@ export class GlobalPlan implements OnInit {
     phases: { phase: 1 | 2; taskGroups: { taskName: string; taskColor: string; players: string[] }[] }[];
   } | null>;
 
-  ngOnInit() {
+  async ngOnInit() {
     const allianceId = resolveAllianceId(
       this.route.snapshot.paramMap.get('stateId')!,
       this.route.snapshot.paramMap.get('allianceSlug')!,
     );
     this.assignments$ = this.planService.getAssignmentsByAlliance(allianceId);
     this.tasks$       = this.planService.getTasksByAlliance(allianceId);
-    this.players$     = this.playerService.getPlayersByAlliance(allianceId);
+
+    const alliance = await this.allianceService.getAlliance(allianceId);
+    // A state-event shell has no signups of its own — its roster is every real
+    // alliance's players in the same state. See admin-dashboard.ts for the same split.
+    this.players$ = alliance?.type === 'state_event'
+      ? from(this.playerService.getPlayersForStateEvent(alliance.stateId, allianceId))
+      : this.playerService.getPlayersByAlliance(allianceId);
 
     this.selectedLocationAssignments$ = combineLatest([
       this.assignments$, this.tasks$, this.players$, this.globalLegion$, this.selectedLocationId$
@@ -133,6 +142,12 @@ export class GlobalPlan implements OnInit {
           })
       )
     );
+
+    // Zoneless: async ngOnInit resumes outside any CD trigger, so property
+    // assignments above (players$ and everything derived from it) don't repaint
+    // on their own. Nudge CD so the async pipes subscribe to the freshly-assigned
+    // observables immediately. See admin-dashboard.ts for the same pattern.
+    this.cdr.markForCheck();
   }
 
   setGlobalPhase(phase: 1 | 2) {

@@ -10,6 +10,47 @@
     This list is read-only — jump into an alliance's dashboard from here.
   </p>
 
+  <mat-card class="create-event-card">
+    <mat-card-header>
+      <mat-card-title>Create State Event</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p class="hint">
+        A state-wide event shell — its roster is every real alliance's players in the state,
+        not its own signups. See the Foundry Planner docs for how these differ from normal
+        alliances.
+      </p>
+      <form class="create-event-form" (ngSubmit)="createStateEvent()">
+        <mat-form-field appearance="outline" *ngIf="isSuperadmin">
+          <mat-label>State</mat-label>
+          <mat-select name="newEventStateId" [(ngModel)]="newEventStateId" required>
+            <mat-option *ngFor="let state of (states$ | async)" [value]="state.id">
+              {{ state.name || state.id }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" *ngIf="!isSuperadmin">
+          <mat-label>State</mat-label>
+          <input matInput [value]="myStateId" disabled>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Slug</mat-label>
+          <input matInput name="newEventSlug" [(ngModel)]="newEventSlug" placeholder="e.g. foundry-s2" required>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Name</mat-label>
+          <input matInput name="newEventName" [(ngModel)]="newEventName" placeholder="e.g. Foundry Battle Season 2" required>
+        </mat-form-field>
+
+        <button mat-flat-button color="primary" type="submit" [disabled]="creatingEvent">
+          <mat-icon>add</mat-icon> Create
+        </button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
   <mat-card>
     <mat-card-header>
       <mat-card-title>All Alliances</mat-card-title>
@@ -24,7 +65,7 @@
             <div class="alliance-info">
               <span class="alliance-name">{{ alliance.name }}</span>
               <span class="alliance-slug">{{ alliance.stateId }} / {{ alliance.slug }}</span>
-              <span *ngIf="alliance.isCrossAlliance" class="cross-alliance-badge">Cross-Alliance</span>
+              <span *ngIf="alliance.type === 'state_event'" class="cross-alliance-badge">State Event</span>
             </div>
             <div class="alliance-actions">
               <button mat-stroked-button (click)="navigateTo(alliance)">

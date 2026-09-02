@@ -106,9 +106,9 @@ export class BattlePlanBuilder implements OnInit {
     this.tasks$           = this.planService.getTasksByAlliance(this.allianceId);
 
     // Load players based on alliance type
-    if (this.alliance?.isCrossAlliance) {
-      // Cross-alliance: load players from all other alliances
-      this.players$ = from(this.playerService.getPlayersFromOtherAlliances(this.allianceId));
+    if (this.alliance?.type === 'state_event') {
+      // State event: roster is every real alliance's players in the same state.
+      this.players$ = from(this.playerService.getPlayersForStateEvent(this.alliance.stateId, this.allianceId));
     } else {
       // Normal alliance: load only players for this alliance
       this.players$ = this.playerService.getPlayersByAlliance(this.allianceId);
@@ -134,7 +134,7 @@ export class BattlePlanBuilder implements OnInit {
         // Get the correct legion value for each player based on alliance type
         return players
           .filter(p => {
-            const playerLegion = this.alliance?.isCrossAlliance
+            const playerLegion = this.alliance?.type === 'state_event'
               ? p.legionByAlliance?.[this.allianceId]
               : p.legion;
             return Number(playerLegion) === legion;

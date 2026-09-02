@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, collectionData, doc, getDoc, setDoc, query, where } from '@angular/fire/firestore';
+import { Firestore, collection, collectionData, doc, getDoc, setDoc, query, where, serverTimestamp } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
-import { Alliance } from '../models/alliance.model';
+import { Alliance, allianceId } from '../models/alliance.model';
 
 // Alliance CRUD (create/rename/delete) moved to plannet-wos's state-admin dashboard as part
 // of the multi-state rollout — see that repo's core/services/alliance.service.ts and the
@@ -29,7 +29,27 @@ export class AllianceService {
     return snap.exists() ? (snap.data() as Alliance) : null;
   }
 
-  async updateAlliance(id: string, updates: Partial<Pick<Alliance, 'finalTime' | 'finalTimeL1' | 'finalTimeL2' | 'isCrossAlliance'>>): Promise<void> {
+  async updateAlliance(id: string, updates: Partial<Pick<Alliance, 'finalTime' | 'finalTimeL1' | 'finalTimeL2'>>): Promise<void> {
     await setDoc(doc(this.firestore, `alliances/${id}`), updates, { merge: true });
+  }
+
+  /**
+   * Mints a state-event shell alliance — see alliance.model.ts's `type` field doc. Slug
+   * uniqueness is only checked within the state, same as a normal alliance (see plannet-wos's
+   * AllianceService.create(), which this mirrors for the one case foundry-planner itself now
+   * creates alliances for).
+   */
+  async createStateEvent(stateId: string, slug: string, name: string): Promise<void> {
+    const id = allianceId(stateId, slug);
+    const existing = await getDoc(doc(this.firestore, `alliances/${id}`));
+    if (existing.exists()) throw new Error(`Alliance "${slug}" already exists in this state`);
+    await setDoc(doc(this.firestore, `alliances/${id}`), {
+      id,
+      stateId,
+      slug,
+      name,
+      type: 'state_event',
+      createdAt: serverTimestamp(),
+    });
   }
 }

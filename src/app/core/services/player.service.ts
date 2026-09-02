@@ -65,11 +65,33 @@ export class PlayerService {
     await deleteDoc(doc(this.firestore, `players/${playerId}`));
   }
 
-  /** Fetch all players from alliances other than the specified one */
-  async getPlayersFromOtherAlliances(excludeAllianceId: string): Promise<Player[]> {
-    const playersCol = collection(this.firestore, 'players');
-    const q = query(playersCol, where('allianceId', '!=', excludeAllianceId));
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ ...d.data(), id: d.id } as Player));
+  /**
+   * Every player belonging to a "real" alliance (type !== 'state_event') in the given state —
+   * the roster for a state-event alliance's admin-dashboard/battle-plan-builder/signup views
+   * and, critically, for a participant looking up their own plan there (see personal-plan.ts/
+   * global-plan.ts). Scoped to one state by construction — replaces the old
+   * getPlayersFromOtherAlliances(), whose unscoped `allianceId != mine` query pulled in every
+   * player from every state once more than one existed. `excludeAllianceId` is normally the
+   * state-event shell itself; it's excluded from the alliance list even though it's already
+   * filtered out by type, in case a caller passes something else.
+   */
+  async getPlayersForStateEvent(stateId: string, excludeAllianceId: string): Promise<Player[]> {
+    const alliancesCol = collection(this.firestore, 'alliances');
+    const allianceSnap = await getDocs(query(alliancesCol, where('stateId', '==', stateId)));
+    const realAllianceIds = allianceSnap.docs
+      .filter((d) => d.id !== excludeAllianceId && d.data()['type'] !== 'state_event')
+      .map((d) => d.id);
+
+    if (realAllianceIds.length === 0) return [];
+
+    // Firestore's `in` operator caps at 30 values — chunk defensively in case a state ever
+    // has more alliances than that.
+    const chunks: string[][] = [];
+    for (let i = 0; i < realAllianceIds.length; i += 30) chunks.push(realAllianceIds.slice(i, i + 30));
+
+    const results = await Promise.all(
+      chunks.map((ids) => getDocs(query(this.playersCollection, where('allianceId', 'in', ids)))),
+    );
+    return results.flatMap((snap) => snap.docs.map((d) => ({ ...d.data(), id: d.id } as Player)));
   }
 }

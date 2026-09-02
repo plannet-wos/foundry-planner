@@ -66,9 +66,9 @@ export class AdminDashboard implements OnInit {
     this.alliance   = await this.allianceService.getAlliance(this.allianceId);
 
     // Load players based on alliance type
-    if (this.alliance?.isCrossAlliance) {
-      // Cross-alliance: load players from all other alliances
-      this.players$ = from(this.playerService.getPlayersFromOtherAlliances(this.allianceId));
+    if (this.alliance?.type === 'state_event') {
+      // State event: roster is every real alliance's players in the same state.
+      this.players$ = from(this.playerService.getPlayersForStateEvent(this.alliance.stateId, this.allianceId));
     } else {
       // Normal alliance: load only players for this alliance
       this.players$ = this.playerService.getPlayersByAlliance(this.allianceId);
@@ -96,8 +96,8 @@ export class AdminDashboard implements OnInit {
         return v === '1' ? 0 : v === '2' ? 1 : 2;
       };
       // Get the correct legion value for each player
-      const aLegion = this.alliance?.isCrossAlliance ? a.legionByAlliance?.[this.allianceId] : a.legion;
-      const bLegion = this.alliance?.isCrossAlliance ? b.legionByAlliance?.[this.allianceId] : b.legion;
+      const aLegion = this.alliance?.type === 'state_event' ? a.legionByAlliance?.[this.allianceId] : a.legion;
+      const bLegion = this.alliance?.type === 'state_event' ? b.legionByAlliance?.[this.allianceId] : b.legion;
       const diff = legionOrder(aLegion) - legionOrder(bLegion);
       return diff !== 0 ? diff : a.inGameName.localeCompare(b.inGameName);
     });
@@ -130,7 +130,7 @@ export class AdminDashboard implements OnInit {
   ) {
     try {
       // For cross-alliance events, use alliance-specific update
-      if (this.alliance?.isCrossAlliance) {
+      if (this.alliance?.type === 'state_event') {
         await this.playerService.updatePlayerLegionInAlliance(playerId, this.allianceId, legion);
       } else {
         await this.playerService.updatePlayerLegion(playerId, legion);
@@ -157,7 +157,7 @@ export class AdminDashboard implements OnInit {
   async setTier(playerId: string, value: PlayerTier | 'none') {
     try {
       // For cross-alliance events, use alliance-specific update
-      if (this.alliance?.isCrossAlliance) {
+      if (this.alliance?.type === 'state_event') {
         await this.playerService.updatePlayerTierInAlliance(playerId, this.allianceId, value === 'none' ? null : value);
       } else {
         await this.playerService.updatePlayerTier(playerId, value === 'none' ? null : value);
@@ -191,7 +191,7 @@ export class AdminDashboard implements OnInit {
   async confirmDelete(player: Player) {
     try {
       // For cross-alliance events, only delete assignments; don't delete the player record
-      if (this.alliance?.isCrossAlliance) {
+      if (this.alliance?.type === 'state_event') {
         await this.planService.deletePlayerAssignments(player.id, this.allianceId);
         this.snackBar.open(`${player.inGameName} removed from event`, 'Close', { duration: 3000 });
       } else {
@@ -215,7 +215,7 @@ export class AdminDashboard implements OnInit {
 
   /** Get the effective league for a player in the current alliance context */
   getPlayerLegion(player: Player): 1 | 2 | 'unassigned' {
-    if (this.alliance?.isCrossAlliance) {
+    if (this.alliance?.type === 'state_event') {
       return player.legionByAlliance?.[this.allianceId] ?? 'unassigned';
     }
     return player.legion ?? 'unassigned';
@@ -223,7 +223,7 @@ export class AdminDashboard implements OnInit {
 
   /** Get the effective tier for a player in the current alliance context */
   getPlayerTier(player: Player): PlayerTier | undefined {
-    if (this.alliance?.isCrossAlliance) {
+    if (this.alliance?.type === 'state_event') {
       return player.tierByAlliance?.[this.allianceId];
     }
     return player.tier;
