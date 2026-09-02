@@ -7,6 +7,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MapViewer } from '../../shared/map-viewer/map-viewer';
+import { allianceId as resolveAllianceId } from '../../core/models/alliance.model';
 import { Observable, combineLatest, BehaviorSubject } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { PlanService } from '../../core/services/plan.service';
@@ -51,7 +52,10 @@ export class GlobalPlan implements OnInit {
   } | null>;
 
   ngOnInit() {
-    const allianceId = this.route.snapshot.paramMap.get('allianceId')!;
+    const allianceId = resolveAllianceId(
+      this.route.snapshot.paramMap.get('stateId')!,
+      this.route.snapshot.paramMap.get('allianceSlug')!,
+    );
     this.assignments$ = this.planService.getAssignmentsByAlliance(allianceId);
     this.tasks$       = this.planService.getTasksByAlliance(allianceId);
     this.players$     = this.playerService.getPlayersByAlliance(allianceId);

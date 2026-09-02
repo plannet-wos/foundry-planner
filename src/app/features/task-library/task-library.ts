@@ -17,6 +17,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { PlanService } from '../../core/services/plan.service';
 import { TaskTemplate, MapLocation } from '../../core/models/plan.model';
+import { allianceId } from '../../core/models/alliance.model';
 
 const COLOR_PALETTE = [
   '#e53935', '#1e88e5', '#43a047', '#fb8c00', '#8e24aa',
@@ -50,6 +51,8 @@ export class TaskLibrary implements OnInit {
   private destroyRef  = inject(DestroyRef);
 
   allianceId!: string;
+  stateId!: string;
+  allianceSlug!: string;
   // Editable tasks (excludes the synthetic teleport task).
   tasks$!: Observable<TaskTemplate[]>;
   // Whether the alliance currently has the teleport task enabled.
@@ -69,7 +72,9 @@ export class TaskLibrary implements OnInit {
   });
 
   ngOnInit() {
-    this.allianceId = this.route.snapshot.paramMap.get('allianceId')!;
+    this.stateId = this.route.snapshot.paramMap.get('stateId')!;
+    this.allianceSlug = this.route.snapshot.paramMap.get('allianceSlug')!;
+    this.allianceId = allianceId(this.stateId, this.allianceSlug);
     const allTasks$ = this.planService.getTasksByAlliance(this.allianceId);
 
     this.tasks$ = allTasks$.pipe(

@@ -16,7 +16,7 @@ import { PlanService } from '../../core/services/plan.service';
 import { AllianceService } from '../../core/services/alliance.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Player, PlayerTier } from '../../core/models/player.model';
-import { Alliance } from '../../core/models/alliance.model';
+import { Alliance, allianceId } from '../../core/models/alliance.model';
 import { BehaviorSubject, combineLatest, Observable, from } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { FormsModule } from '@angular/forms';
@@ -59,7 +59,10 @@ export class AdminDashboard implements OnInit {
   pendingDeleteId: string | null = null;
 
   async ngOnInit() {
-    this.allianceId = this.route.snapshot.paramMap.get('allianceId')!;
+    this.allianceId = allianceId(
+      this.route.snapshot.paramMap.get('stateId')!,
+      this.route.snapshot.paramMap.get('allianceSlug')!,
+    );
     this.alliance   = await this.allianceService.getAlliance(this.allianceId);
 
     // Load players based on alliance type

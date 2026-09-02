@@ -21,7 +21,7 @@ import { PlayerService } from '../../core/services/player.service';
 import { AllianceService } from '../../core/services/alliance.service';
 import { TaskTemplate, Assignment, MapLocation } from '../../core/models/plan.model';
 import { Player } from '../../core/models/player.model';
-import { Alliance } from '../../core/models/alliance.model';
+import { Alliance, allianceId } from '../../core/models/alliance.model';
 import { AutoPlanModal, AutoPlanModalData } from './auto-plan-modal/auto-plan-modal';
 import { AutoPlanResult } from './auto-plan.service';
 
@@ -58,6 +58,8 @@ export class BattlePlanBuilder implements OnInit {
   private destroyRef      = inject(DestroyRef);
 
   allianceId!: string;
+  stateId!: string;
+  allianceSlug!: string;
   alliance: Alliance | null = null;
 
   tasks$!: Observable<TaskTemplate[]>;
@@ -96,7 +98,9 @@ export class BattlePlanBuilder implements OnInit {
   });
 
   async ngOnInit() {
-    this.allianceId = this.route.snapshot.paramMap.get('allianceId')!;
+    this.stateId = this.route.snapshot.paramMap.get('stateId')!;
+    this.allianceSlug = this.route.snapshot.paramMap.get('allianceSlug')!;
+    this.allianceId = allianceId(this.stateId, this.allianceSlug);
     this.alliance   = await this.allianceService.getAlliance(this.allianceId);
 
     this.tasks$           = this.planService.getTasksByAlliance(this.allianceId);

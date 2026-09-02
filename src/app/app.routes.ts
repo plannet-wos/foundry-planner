@@ -15,21 +15,26 @@ import { allianceAdminGuard } from './core/guards/alliance-admin.guard';
 
 export const routes: Routes = [
   // Landing
-  { path: '',                               component: Home },
-  { path: 'login',                          component: Login },
-  { path: 'player',                         component: AllianceSelect },
+  { path: '',                                    component: Home },
+  { path: 'login',                               component: Login },
 
-  // Superadmin
-  { path: 'superadmin',                     component: SuperadminDashboard,  canActivate: [superadminGuard] },
+  // Superadmin (global — see the multi-state rollout plan; alliance CRUD itself now lives
+  // in plannet-wos's state-admin dashboard, this only keeps a read-only oversight view + feedback)
+  { path: 'superadmin',                          component: SuperadminDashboard, canActivate: [superadminGuard] },
 
-  // Admin (alliance-scoped)
-  { path: 'admin/:allianceId',              component: AdminDashboard,       canActivate: [allianceAdminGuard] },
-  { path: 'admin/:allianceId/task-library', component: TaskLibrary,          canActivate: [allianceAdminGuard] },
-  { path: 'admin/:allianceId/plan-builder', component: BattlePlanBuilder,    canActivate: [allianceAdminGuard] },
+  // State-scoped: everything below here needs a game server/state number as the first
+  // segment. :allianceSlug is the bare, human-readable part — see resolveAllianceId()/
+  // allianceId() in alliance.model.ts for how it's composed with :stateId into the real
+  // Firestore document ID at each call site.
+  { path: ':stateId/player',                                    component: AllianceSelect },
+
+  { path: ':stateId/admin/:allianceSlug',              component: AdminDashboard,    canActivate: [allianceAdminGuard] },
+  { path: ':stateId/admin/:allianceSlug/task-library', component: TaskLibrary,       canActivate: [allianceAdminGuard] },
+  { path: ':stateId/admin/:allianceSlug/plan-builder', component: BattlePlanBuilder, canActivate: [allianceAdminGuard] },
 
   // Player-facing routes (public, alliance-scoped)
-  { path: 'alliance/:allianceId',           component: Signup },
-  { path: 'alliance/:allianceId/guides',    component: Guides },
-  { path: 'alliance/:allianceId/plan',      component: PersonalPlan },
-  { path: 'alliance/:allianceId/global',    component: GlobalPlan },
+  { path: ':stateId/alliance/:allianceSlug',           component: Signup },
+  { path: ':stateId/alliance/:allianceSlug/guides',    component: Guides },
+  { path: ':stateId/alliance/:allianceSlug/plan',      component: PersonalPlan },
+  { path: ':stateId/alliance/:allianceSlug/global',    component: GlobalPlan },
 ];

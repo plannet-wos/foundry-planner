@@ -16,7 +16,7 @@ import { PlayerService } from '../../core/services/player.service';
 import { AllianceService } from '../../core/services/alliance.service';
 import { Assignment, MapLocation, TaskTemplate } from '../../core/models/plan.model';
 import { Player } from '../../core/models/player.model';
-import { Alliance } from '../../core/models/alliance.model';
+import { Alliance, allianceId } from '../../core/models/alliance.model';
 
 @Component({
   selector: 'app-player-view',
@@ -62,7 +62,10 @@ export class PlayerView implements OnInit {
   locationAssignments$!: Observable<{ location: MapLocation; taskGroups: { taskName: string; players: string[] }[] }[]>;
 
   async ngOnInit() {
-    this.allianceId = this.route.snapshot.paramMap.get('allianceId')!;
+    this.allianceId = allianceId(
+      this.route.snapshot.paramMap.get('stateId')!,
+      this.route.snapshot.paramMap.get('allianceSlug')!,
+    );
     this.alliance   = await this.allianceService.getAlliance(this.allianceId);
 
     this.assignments$ = this.planService.getAssignmentsByAlliance(this.allianceId);

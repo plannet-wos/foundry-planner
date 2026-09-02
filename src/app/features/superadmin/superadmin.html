@@ -1,40 +1,18 @@
 <div class="superadmin-container">
   <div class="page-header">
-    <h2>Alliance Management</h2>
+    <h2>Alliances</h2>
     <button mat-stroked-button (click)="logout()">Logout</button>
   </div>
 
-  <!-- Create Alliance -->
-  <mat-card class="create-card">
-    <mat-card-header>
-      <mat-card-title>Create New Alliance</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <div class="create-form">
-        <mat-form-field appearance="outline">
-          <mat-label>Alliance Name</mat-label>
-          <input matInput [(ngModel)]="newAllianceName" placeholder="e.g. Phoenix" />
-          <mat-hint>Route: /alliance/{{ newAllianceSlug || '...' }}</mat-hint>
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Admin Username (provisioned manually after)</mat-label>
-          <input matInput [(ngModel)]="newAdminUsername" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Admin Password (provisioned manually after)</mat-label>
-          <input matInput [(ngModel)]="newAdminPassword" />
-        </mat-form-field>
-        <button mat-flat-button color="primary" (click)="createAlliance()" [disabled]="!createFormValid || creating">
-          Create Alliance
-        </button>
-      </div>
-    </mat-card-content>
-  </mat-card>
+  <p class="hint">
+    Creating, renaming, and deleting alliances now happens in
+    <a href="https://plannet-wos.web.app" target="_self">Plannet WOS</a>'s state-admin console.
+    This list is read-only — jump into an alliance's dashboard from here.
+  </p>
 
-  <!-- Existing Alliances -->
   <mat-card>
     <mat-card-header>
-      <mat-card-title>Existing Alliances</mat-card-title>
+      <mat-card-title>All Alliances</mat-card-title>
     </mat-card-header>
     <mat-card-content>
       <ng-container *ngIf="alliances$ | async as alliances">
@@ -45,55 +23,19 @@
           <div class="alliance-row">
             <div class="alliance-info">
               <span class="alliance-name">{{ alliance.name }}</span>
-              <span class="alliance-slug">/alliance/{{ alliance.id }}</span>
+              <span class="alliance-slug">{{ alliance.stateId }} / {{ alliance.slug }}</span>
               <span *ngIf="alliance.isCrossAlliance" class="cross-alliance-badge">Cross-Alliance</span>
             </div>
-            @if (pendingDeleteId === alliance.id) {
-              <div class="delete-confirm">
-                <span class="delete-label">Delete everything?</span>
-                <button mat-icon-button color="warn" (click)="confirmDelete(alliance)" title="Confirm"><mat-icon>check</mat-icon></button>
-                <button mat-icon-button (click)="cancelDelete()" title="Cancel"><mat-icon>close</mat-icon></button>
-              </div>
-            } @else {
-              <div class="alliance-actions">
-                <button mat-icon-button (click)="openEditAlliance(alliance)" [matTooltip]="'Edit alliance'" title="Edit">
-                  <mat-icon>edit</mat-icon>
-                </button>
-                <button mat-stroked-button (click)="navigateTo(alliance.id)">
-                  <mat-icon>dashboard</mat-icon> Open Dashboard
-                </button>
-                <button mat-icon-button color="warn" (click)="requestDelete(alliance.id)" title="Delete alliance">
-                  <mat-icon>delete</mat-icon>
-                </button>
-              </div>
-            }
+            <div class="alliance-actions">
+              <button mat-stroked-button (click)="navigateTo(alliance)">
+                <mat-icon>dashboard</mat-icon> Open Dashboard
+              </button>
+            </div>
           </div>
           <mat-divider></mat-divider>
         }
       </ng-container>
      </mat-card-content>
-   </mat-card>
-
-   <!-- Edit Alliance Modal -->
-   <mat-card *ngIf="editingAllianceId" class="edit-dialog">
-     <mat-card-header>
-       <mat-card-title>Edit Alliance</mat-card-title>
-     </mat-card-header>
-     <mat-card-content>
-       <mat-form-field appearance="outline" class="full-width">
-         <mat-label>Alliance Name</mat-label>
-         <input matInput [(ngModel)]="editingAllianceName">
-       </mat-form-field>
-       <mat-checkbox [(ngModel)]="editingIsCrossAlliance" class="checkbox">
-         Cross-Alliance Event (uses players from other alliances)
-       </mat-checkbox>
-     </mat-card-content>
-     <mat-card-actions>
-       <button mat-button (click)="cancelEdit()">Cancel</button>
-       <button mat-raised-button color="primary" (click)="saveAllianceEdit()" [disabled]="editingSaving">
-         Save
-       </button>
-     </mat-card-actions>
    </mat-card>
 
    <!-- Feedback -->

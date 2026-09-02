@@ -14,7 +14,7 @@
       <button
         *ngFor="let alliance of alliances"
         class="alliance-card"
-        (click)="select(alliance.id)">
+        (click)="select(alliance)">
         <mat-icon class="alliance-card__icon">groups</mat-icon>
         <span class="alliance-card__name">{{ alliance.name }}</span>
         <mat-icon class="alliance-card__arrow">chevron_right</mat-icon>

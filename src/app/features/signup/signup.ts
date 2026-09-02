@@ -11,7 +11,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatListModule } from '@angular/material/list';
 import { PlayerService } from '../../core/services/player.service';
 import { AllianceService } from '../../core/services/alliance.service';
-import { Alliance } from '../../core/models/alliance.model';
+import { Alliance, allianceId } from '../../core/models/alliance.model';
 import { Player } from '../../core/models/player.model';
 
 export interface TimeSlot { id: string; label: string; }
@@ -62,7 +62,10 @@ export class Signup implements OnInit {
   });
 
   async ngOnInit() {
-    this.allianceId = this.route.snapshot.paramMap.get('allianceId')!;
+    this.allianceId = allianceId(
+      this.route.snapshot.paramMap.get('stateId')!,
+      this.route.snapshot.paramMap.get('allianceSlug')!,
+    );
     this.alliance   = await this.allianceService.getAlliance(this.allianceId);
 
     // Check if this is a cross-alliance event

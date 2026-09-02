@@ -1,35 +1,32 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
 import { AllianceService } from '../../core/services/alliance.service';
 import { FeedbackService } from '../../core/services/feedback.service';
 import { Feedback } from '../../core/models/feedback.model';
 import { AuthService } from '../../core/services/auth.service';
 import { Alliance } from '../../core/models/alliance.model';
-import { getDocs, query, collection, where, deleteDoc } from '@angular/fire/firestore';
-import { Firestore } from '@angular/fire/firestore';
 
+// Alliance create/edit/delete moved to plannet-wos's state-admin dashboard as part of the
+// multi-state rollout (see the plan) — that's now the only place minting/retiring composite
+// alliance IDs. This page keeps a read-only list purely so superadmin can jump into any
+// alliance's foundry-planner dashboard for oversight, plus the unrelated feedback inbox it
+// already hosted.
 @Component({
   selector: 'app-superadmin',
   standalone: true,
   imports: [
-    CommonModule, FormsModule,
+    CommonModule,
     MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatListModule,
-    MatSnackBarModule, MatDividerModule, MatCheckboxModule, MatTooltipModule
+    MatListModule, MatSnackBarModule, MatDividerModule,
   ],
   templateUrl: './superadmin.html',
   styleUrl: './superadmin.scss'
@@ -37,28 +34,11 @@ import { Firestore } from '@angular/fire/firestore';
 export class SuperadminDashboard implements OnInit {
   private allianceService  = inject(AllianceService);
   private auth             = inject(AuthService);
-  private snackBar         = inject(MatSnackBar);
   private router           = inject(Router);
-  private firestore        = inject(Firestore);
   private feedbackService  = inject(FeedbackService);
 
   alliances$!: Observable<Alliance[]>;
   feedback$!:  Observable<Feedback[]>;
-
-  // Create form
-  newAllianceName = '';
-  newAdminUsername = '';
-  newAdminPassword = '';
-  creating = false;
-
-  // Edit form
-  editingAllianceId: string | null = null;
-  editingAllianceName = '';
-  editingIsCrossAlliance = false;
-  editingSaving = false;
-
-  // Pending delete
-  pendingDeleteId: string | null = null;
 
   ngOnInit() {
     this.alliances$ = this.allianceService.getAlliances();
@@ -71,105 +51,8 @@ export class SuperadminDashboard implements OnInit {
     await this.feedbackService.delete(id);
   }
 
-  get newAllianceSlug(): string {
-    return AllianceService.toSlug(this.newAllianceName);
-  }
-
-  get createFormValid(): boolean {
-    return !!(this.newAllianceName.trim() && this.newAdminUsername.trim() && this.newAdminPassword.trim());
-  }
-
-  async createAlliance() {
-    if (!this.createFormValid) return;
-    this.creating = true;
-    const slug = this.newAllianceSlug;
-    try {
-      await this.allianceService.saveAlliance({
-        id: slug,
-        name: this.newAllianceName.trim(),
-        createdAt: Date.now()
-      });
-      // Admin accounts are no longer self-service (accounts.create is
-      // locked down — see firestore.rules). Surface exactly what to
-      // provision manually instead of silently failing to write it.
-      this.snackBar.open(
-        `Alliance "${this.newAllianceName.trim()}" created. Now provision its admin account manually ` +
-        `(username "${this.newAdminUsername.trim()}", alliance "${slug}") — ask for it, or add it via the Firebase console.`,
-        'Close',
-        { duration: 10000 }
-      );
-      this.newAllianceName = '';
-      this.newAdminUsername = '';
-      this.newAdminPassword = '';
-    } catch (e) {
-      console.error(e);
-      this.snackBar.open('Failed to create alliance', 'Close', { duration: 3000 });
-    }
-    this.creating = false;
-  }
-
-  requestDelete(allianceId: string) {
-    this.pendingDeleteId = allianceId;
-  }
-
-  cancelDelete() {
-    this.pendingDeleteId = null;
-  }
-
-  async confirmDelete(alliance: Alliance) {
-    try {
-      // Delete alliance doc, players, tasks, assignments. Admin accounts for
-      // this alliance are NOT cleaned up here anymore — `accounts` is
-      // unreadable, so there's no way to even find which docs belong to
-      // this alliance from the client. Removing them is a manual step now.
-      const playersSnap = await getDocs(query(collection(this.firestore, 'players'), where('allianceId', '==', alliance.id)));
-      const tasksSnap   = await getDocs(query(collection(this.firestore, 'tasks'),   where('allianceId', '==', alliance.id)));
-      const assignSnap  = await getDocs(query(collection(this.firestore, 'assignments'), where('allianceId', '==', alliance.id)));
-
-      await Promise.all([
-        ...playersSnap.docs.map(d => deleteDoc(d.ref)),
-        ...tasksSnap.docs.map(d => deleteDoc(d.ref)),
-        ...assignSnap.docs.map(d => deleteDoc(d.ref)),
-        this.allianceService.deleteAlliance(alliance.id),
-      ]);
-
-      this.pendingDeleteId = null;
-      this.snackBar.open(`"${alliance.name}" deleted. Remove its admin account manually too.`, 'Close', { duration: 6000 });
-    } catch (e) {
-      console.error(e);
-      this.snackBar.open('Failed to delete alliance', 'Close', { duration: 3000 });
-    }
-  }
-
-  navigateTo(allianceId: string) {
-    this.router.navigate(['/admin', allianceId]);
-  }
-
-  openEditAlliance(alliance: Alliance) {
-    this.editingAllianceId = alliance.id;
-    this.editingAllianceName = alliance.name;
-    this.editingIsCrossAlliance = alliance.isCrossAlliance ?? false;
-  }
-
-  cancelEdit() {
-    this.editingAllianceId = null;
-  }
-
-  async saveAllianceEdit() {
-    if (!this.editingAllianceId || !this.editingAllianceName.trim()) return;
-    this.editingSaving = true;
-    try {
-      await this.allianceService.updateAlliance(this.editingAllianceId, {
-        name: this.editingAllianceName.trim(),
-        isCrossAlliance: this.editingIsCrossAlliance
-      });
-      this.snackBar.open('Alliance updated', 'Close', { duration: 2000 });
-      this.editingAllianceId = null;
-    } catch (e) {
-      console.error(e);
-      this.snackBar.open('Failed to update alliance', 'Close', { duration: 3000 });
-    }
-    this.editingSaving = false;
+  navigateTo(alliance: Alliance) {
+    this.router.navigate([alliance.stateId, 'admin', alliance.slug]);
   }
 
   logout() {

@@ -4,7 +4,7 @@ import { ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { AllianceService } from '../../core/services/alliance.service';
-import { Alliance } from '../../core/models/alliance.model';
+import { Alliance, allianceId as resolveAllianceId } from '../../core/models/alliance.model';
 
 @Component({
   selector: 'app-guides',
@@ -20,7 +20,10 @@ export class Guides implements OnInit {
   alliance: Alliance | null = null;
 
   async ngOnInit() {
-    const allianceId = this.route.snapshot.paramMap.get('allianceId')!;
+    const allianceId = resolveAllianceId(
+      this.route.snapshot.paramMap.get('stateId')!,
+      this.route.snapshot.paramMap.get('allianceSlug')!,
+    );
     this.alliance    = await this.allianceService.getAlliance(allianceId);
   }
 }

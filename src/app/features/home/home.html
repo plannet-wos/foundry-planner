@@ -14,7 +14,11 @@
       <div class="role-card__sub">Manage tasks and battle plans</div>
     </a>
 
-    <a class="role-card role-card--player" routerLink="/player">
+    <!-- Hardcoded to state 3038: this app is now entered via plannet-wos's state-scoped
+         links (see the multi-state rollout plan), but a bare root visit has no :stateId to
+         read — 3038 is the only state that existed before that rollout, so it's the correct
+         transition-window default here, same as the plan's legacy-link redirects. -->
+    <a class="role-card role-card--player" [routerLink]="['3038', 'player']">
       <div class="role-card__icon">
         <mat-icon>person</mat-icon>
       </div>

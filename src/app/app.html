@@ -6,27 +6,30 @@
     @if (!isMobile()) {
       <!-- ── DESKTOP NAV ── -->
 
-      @if (auth.isSuperAdmin()) {
+      @if (isSuperAdmin()) {
         <button mat-button routerLink="/superadmin">Alliance Management</button>
-        @if (adminAllianceId()) {
-          <button mat-button [routerLink]="['/admin', adminAllianceId(), 'task-library']">Task Library</button>
-          <button mat-button [routerLink]="['/admin', adminAllianceId(), 'plan-builder']">Plan Builder</button>
-          <button mat-button [routerLink]="['/alliance', adminAllianceId(), 'global']">Plan Preview</button>
-          <button mat-button [routerLink]="['/alliance', adminAllianceId(), 'plan']">My Plan</button>
+        @if (adminAlliance(); as a) {
+          <button mat-button [routerLink]="[a.stateId, 'admin', a.slug, 'task-library']">Task Library</button>
+          <button mat-button [routerLink]="[a.stateId, 'admin', a.slug, 'plan-builder']">Plan Builder</button>
+          <button mat-button [routerLink]="[a.stateId, 'alliance', a.slug, 'global']">Plan Preview</button>
+          <button mat-button [routerLink]="[a.stateId, 'alliance', a.slug, 'plan']">My Plan</button>
         }
         <button mat-button (click)="logout()">Logout</button>
 
-      } @else if (auth.isAuthenticated()) {
-        <button mat-button [routerLink]="['/admin', auth.getAllianceId(), 'task-library']">Task Library</button>
-        <button mat-button [routerLink]="['/admin', auth.getAllianceId(), 'plan-builder']">Plan Builder</button>
-        <button mat-button [routerLink]="['/alliance', auth.getAllianceId(), 'global']">Plan Preview</button>
-        <button mat-button [routerLink]="['/alliance', auth.getAllianceId(), 'plan']">My Plan</button>
+      } @else if (isAllianceAdmin() && myAlliance(); as a) {
+        <button mat-button [routerLink]="[a.stateId, 'admin', a.slug, 'task-library']">Task Library</button>
+        <button mat-button [routerLink]="[a.stateId, 'admin', a.slug, 'plan-builder']">Plan Builder</button>
+        <button mat-button [routerLink]="[a.stateId, 'alliance', a.slug, 'global']">Plan Preview</button>
+        <button mat-button [routerLink]="[a.stateId, 'alliance', a.slug, 'plan']">My Plan</button>
         <button mat-button (click)="logout()">Logout</button>
 
-      } @else if (routeAllianceId()) {
-        <button mat-button [routerLink]="['/alliance', routeAllianceId()]">Event Registration</button>
-        <button mat-button [routerLink]="['/alliance', routeAllianceId(), 'plan']">Personal Plan</button>
-        <button mat-button [routerLink]="['/alliance', routeAllianceId(), 'global']">Global Plan</button>
+      } @else if (auth.isAuthenticated()) {
+        <button mat-button (click)="logout()">Logout</button>
+
+      } @else if (routeAlliance(); as r) {
+        <button mat-button [routerLink]="[r.stateId, 'alliance', r.slug]">Event Registration</button>
+        <button mat-button [routerLink]="[r.stateId, 'alliance', r.slug, 'plan']">Personal Plan</button>
+        <button mat-button [routerLink]="[r.stateId, 'alliance', r.slug, 'global']">Global Plan</button>
 
       } @else {
         <button mat-button routerLink="/login">Login</button>
@@ -41,21 +44,21 @@
 
       <mat-menu #mobileNav="matMenu">
 
-        @if (auth.isSuperAdmin()) {
+        @if (isSuperAdmin()) {
           <button mat-menu-item routerLink="/superadmin">
             <mat-icon>admin_panel_settings</mat-icon> Alliance Management
           </button>
-          @if (adminAllianceId()) {
-            <button mat-menu-item [routerLink]="['/admin', adminAllianceId(), 'task-library']">
+          @if (adminAlliance(); as a) {
+            <button mat-menu-item [routerLink]="[a.stateId, 'admin', a.slug, 'task-library']">
               <mat-icon>library_books</mat-icon> Task Library
             </button>
-            <button mat-menu-item [routerLink]="['/admin', adminAllianceId(), 'plan-builder']">
+            <button mat-menu-item [routerLink]="[a.stateId, 'admin', a.slug, 'plan-builder']">
               <mat-icon>map</mat-icon> Plan Builder
             </button>
-            <button mat-menu-item [routerLink]="['/alliance', adminAllianceId(), 'global']">
+            <button mat-menu-item [routerLink]="[a.stateId, 'alliance', a.slug, 'global']">
               <mat-icon>preview</mat-icon> Plan Preview
             </button>
-            <button mat-menu-item [routerLink]="['/alliance', adminAllianceId(), 'plan']">
+            <button mat-menu-item [routerLink]="[a.stateId, 'alliance', a.slug, 'plan']">
               <mat-icon>assignment</mat-icon> My Plan
             </button>
           }
@@ -63,31 +66,36 @@
             <mat-icon>logout</mat-icon> Logout
           </button>
 
-        } @else if (auth.isAuthenticated()) {
-          <button mat-menu-item [routerLink]="['/admin', auth.getAllianceId(), 'task-library']">
+        } @else if (isAllianceAdmin() && myAlliance(); as a) {
+          <button mat-menu-item [routerLink]="[a.stateId, 'admin', a.slug, 'task-library']">
             <mat-icon>library_books</mat-icon> Task Library
           </button>
-          <button mat-menu-item [routerLink]="['/admin', auth.getAllianceId(), 'plan-builder']">
+          <button mat-menu-item [routerLink]="[a.stateId, 'admin', a.slug, 'plan-builder']">
             <mat-icon>map</mat-icon> Plan Builder
           </button>
-          <button mat-menu-item [routerLink]="['/alliance', auth.getAllianceId(), 'global']">
+          <button mat-menu-item [routerLink]="[a.stateId, 'alliance', a.slug, 'global']">
             <mat-icon>preview</mat-icon> Plan Preview
           </button>
-          <button mat-menu-item [routerLink]="['/alliance', auth.getAllianceId(), 'plan']">
+          <button mat-menu-item [routerLink]="[a.stateId, 'alliance', a.slug, 'plan']">
             <mat-icon>assignment</mat-icon> My Plan
           </button>
           <button mat-menu-item (click)="logout()">
             <mat-icon>logout</mat-icon> Logout
           </button>
 
-        } @else if (routeAllianceId()) {
-          <button mat-menu-item [routerLink]="['/alliance', routeAllianceId()]">
+        } @else if (auth.isAuthenticated()) {
+          <button mat-menu-item (click)="logout()">
+            <mat-icon>logout</mat-icon> Logout
+          </button>
+
+        } @else if (routeAlliance(); as r) {
+          <button mat-menu-item [routerLink]="[r.stateId, 'alliance', r.slug]">
             <mat-icon>app_registration</mat-icon> Event Registration
           </button>
-          <button mat-menu-item [routerLink]="['/alliance', routeAllianceId(), 'plan']">
+          <button mat-menu-item [routerLink]="[r.stateId, 'alliance', r.slug, 'plan']">
             <mat-icon>assignment</mat-icon> Personal Plan
           </button>
-          <button mat-menu-item [routerLink]="['/alliance', routeAllianceId(), 'global']">
+          <button mat-menu-item [routerLink]="[r.stateId, 'alliance', r.slug, 'global']">
             <mat-icon>public</mat-icon> Global Plan
           </button>
 

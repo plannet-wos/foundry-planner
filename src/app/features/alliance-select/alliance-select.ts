@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { Observable } from 'rxjs';
 import { AllianceService } from '../../core/services/alliance.service';
@@ -15,15 +15,17 @@ import { Alliance } from '../../core/models/alliance.model';
 })
 export class AllianceSelect implements OnInit {
   private allianceService = inject(AllianceService);
+  private route           = inject(ActivatedRoute);
   private router          = inject(Router);
 
   alliances$!: Observable<Alliance[]>;
 
   ngOnInit() {
-    this.alliances$ = this.allianceService.getAlliances();
+    const stateId = this.route.snapshot.paramMap.get('stateId')!;
+    this.alliances$ = this.allianceService.listForState$(stateId);
   }
 
-  select(allianceId: string) {
-    this.router.navigate(['/alliance', allianceId, 'plan']);
+  select(alliance: Alliance) {
+    this.router.navigate([alliance.stateId, 'alliance', alliance.slug, 'plan']);
   }
 }

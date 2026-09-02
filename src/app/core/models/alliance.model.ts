@@ -1,5 +1,7 @@
 export interface Alliance {
-  id: string;        // URL-safe slug — used as Firestore doc ID and route param
+  id: string;         // "{stateId}-{slug}" composite — see allianceId() below. URL keeps the bare slug; see the rollout plan.
+  stateId: string;
+  slug: string;        // the bare, human-readable part used in routes, e.g. "eagle"
   name: string;
   finalTime?: string;  // legacy — superseded by per-legion times below
   finalTimeL1?: string;
@@ -8,17 +10,14 @@ export interface Alliance {
   createdAt: number;
 }
 
-/**
- * Shape of a document in the `accounts` collection. Not read or written
- * directly by app code anymore — the collection is fully unreadable and its
- * writes are gated by a password-hash proof (see firestore.rules and
- * auth.service.ts). Kept here as documentation of what's actually stored.
- */
-export interface Account {
-  id: string;            // username, also the doc ID
-  username: string;
-  passwordHash: string;  // PBKDF2-SHA256, salt derived from username — see password.util.ts
-  allianceId?: string;   // alliance-admin accounts
-  role?: 'superadmin';   // the one superadmin account has this instead of allianceId
-  lastLoginAt?: number;
+export function allianceId(stateId: string, slug: string): string {
+  return `${stateId}-${slug}`;
 }
+
+/** Inverse of allianceId() — recovers the bare slug from a composite ID once the stateId is known (e.g. from an Account doc, to build a route without an extra Firestore read). */
+export function allianceSlugFromId(stateId: string, id: string): string {
+  return id.slice(stateId.length + 1);
+}
+
+// `Account` used to be documented here (the accounts collection's old, username-keyed shape).
+// It's now uid-keyed and lives in account.model.ts, mirrored from plannet-wos — see that file.

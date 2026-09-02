@@ -1,16 +1,20 @@
-import { Component, inject } from '@angular/core';
+import { Component } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { AuthService } from '../../core/services/auth.service';
 
+// The ?token= session handoff used to live here so a logged-in admin arrived at plannet-wos
+// still signed in. That only ever worked as a workaround for the old accounts model having
+// no real session Firestore Rules could trust across origins — real Firebase Auth doesn't
+// change that (sessions are still per-origin), so it's not worth rebuilding: each app just
+// signs the same account in independently now. See the multi-state rollout plan.
 @Component({
   selector: 'app-switcher',
   standalone: true,
   imports: [MatButtonModule, MatIconModule, MatTooltipModule],
   template: `
     <a mat-mini-fab class="switcher-fab"
-       [href]="portalUrl()"
+       href="https://plannet-wos.web.app"
        target="_self"
        matTooltip="Plannet WOS"
        aria-label="Go to Plannet WOS">
@@ -32,16 +36,4 @@ import { AuthService } from '../../core/services/auth.service';
     }
   `]
 })
-export class AppSwitcherComponent {
-  private auth = inject(AuthService);
-
-  portalUrl(): string {
-    const base = 'https://plannet-wos.web.app';
-    const session = this.auth.getSession();
-    if (session) {
-      const token = btoa(JSON.stringify(session));
-      return `${base}?token=${encodeURIComponent(token)}`;
-    }
-    return base;
-  }
-}
+export class AppSwitcherComponent {}
