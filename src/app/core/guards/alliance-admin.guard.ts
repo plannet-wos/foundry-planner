@@ -9,9 +9,12 @@ import { allianceId } from '../models/alliance.model';
  * see the multi-state rollout plan) — this guard doesn't distinguish between them, only
  * superadmin (global bypass) from "must be this exact alliance's R4/R5".
  */
-export const allianceAdminGuard: CanActivateFn = (route) => {
+export const allianceAdminGuard: CanActivateFn = async (route) => {
   const auth = inject(AuthService);
   const router = inject(Router);
+  // See AuthService.whenReady()'s doc comment — without this, a genuinely signed-in user
+  // navigating here right after login (or on a fresh page load) can get bounced to /login.
+  await auth.whenReady();
 
   if (!auth.isActive()) return router.createUrlTree(['/login']);
   if (auth.rank() === RANK.SUPERADMIN) return true;

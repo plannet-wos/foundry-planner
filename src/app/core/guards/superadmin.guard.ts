@@ -10,9 +10,14 @@ import { RANK } from '../constants/roles';
  * locked to their own account.stateId, superadmin's is free choice — same "scope, not just
  * rank" split as everywhere else in the hierarchy (see roles.ts).
  */
-export const superadminGuard: CanActivateFn = () => {
+export const superadminGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
   const router = inject(Router);
+  // Must await this first: on a fresh page load (a direct URL, a reload), Firebase Auth's
+  // persisted-session restore — and the account doc's first read — are both async. Checking
+  // rank()/isActive() synchronously here can catch a genuinely signed-in user in that window
+  // and wrongly bounce them to /login. See AuthService.whenReady()'s doc comment.
+  await auth.whenReady();
   const rank = auth.rank();
   return (auth.isActive() && rank !== null && rank <= RANK.STATE_ADMIN) || router.createUrlTree(['/login']);
 };
