@@ -21,6 +21,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { Alliance } from '../../core/models/alliance.model';
 import { StateDoc } from '../../core/models/account.model';
 import { RANK } from '../../core/constants/roles';
+import { environment } from '../../../environments/environment';
 
 // Alliance create/edit/delete moved to plannet-wos's state-admin dashboard as part of the
 // multi-state rollout (see the plan) — that's now the only place minting/retiring composite
@@ -57,6 +58,7 @@ export class SuperadminDashboard implements OnInit {
   /** Superadmin picks any state; state_admin is locked to their own. */
   readonly isSuperadmin = this.auth.rank() === RANK.SUPERADMIN;
   readonly myStateId = this.auth.account()?.stateId ?? null;
+  readonly plannetWosUrl = environment.plannetWosUrl;
 
   newEventStateId = this.myStateId ?? '';
   newEventSlug = '';

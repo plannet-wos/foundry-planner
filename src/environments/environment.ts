@@ -1,5 +1,6 @@
 export const environment = {
   production: false,
+  plannetWosUrl: 'https://plannet-wos.web.app',
   firebase: {
     apiKey: "AIzaSyA_ac19dgbIp3hYNOXmet3J_DgjOWckPes",
     authDomain: "tal-coordinator.firebaseapp.com",

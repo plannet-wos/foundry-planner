@@ -3,6 +3,9 @@
 // `staging` build configuration (see angular.json's fileReplacements) — never used by default.
 export const environment = {
   production: false,
+  // The floating app-switcher FAB and superadmin.ts's "state-admin console" link both read
+  // this — staging must never point back at prod plannet-wos, see the redirect bug this fixed.
+  plannetWosUrl: 'https://plannet-wos-staging.web.app',
   firebase: {
     apiKey: "AIzaSyBI8SXYmf4AbOy-11VQn7qbhDagaxV-Rok",
     authDomain: "plannet-wos-staging.firebaseapp.com",
