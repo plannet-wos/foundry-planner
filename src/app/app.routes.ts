@@ -37,4 +37,20 @@ export const routes: Routes = [
   { path: ':stateId/alliance/:allianceSlug/guides',    component: Guides },
   { path: ':stateId/alliance/:allianceSlug/plan',      component: PersonalPlan },
   { path: ':stateId/alliance/:allianceSlug/global',    component: GlobalPlan },
+
+  // --- Legacy redirects (temporary) -----------------------------------------------
+  // Links shared/bookmarked before the multi-state rollout had no :stateId segment at
+  // all. Redirect them to state 3038 — the only state that existed then — rather than
+  // let them 404. Angular interpolates :allianceId here from the OLD path's own param
+  // name, regardless of what the canonical routes above call it (:allianceSlug).
+  // Segment counts never collide with the routes above (2 segments vs. 3, etc.), so
+  // matching is unambiguous. Remove this block once this window has passed.
+  { path: 'player',                                    redirectTo: '3038/player', pathMatch: 'full' },
+  { path: 'admin/:allianceId',                         redirectTo: '3038/admin/:allianceId', pathMatch: 'full' },
+  { path: 'admin/:allianceId/task-library',            redirectTo: '3038/admin/:allianceId/task-library', pathMatch: 'full' },
+  { path: 'admin/:allianceId/plan-builder',            redirectTo: '3038/admin/:allianceId/plan-builder', pathMatch: 'full' },
+  { path: 'alliance/:allianceId',                      redirectTo: '3038/alliance/:allianceId', pathMatch: 'full' },
+  { path: 'alliance/:allianceId/guides',                redirectTo: '3038/alliance/:allianceId/guides', pathMatch: 'full' },
+  { path: 'alliance/:allianceId/plan',                  redirectTo: '3038/alliance/:allianceId/plan', pathMatch: 'full' },
+  { path: 'alliance/:allianceId/global',                redirectTo: '3038/alliance/:allianceId/global', pathMatch: 'full' },
 ];
