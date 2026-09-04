@@ -1,0 +1,68 @@
+[debug] [2026-09-04T09:41:05.997Z] ----------------------------------------------------------------------
+[debug] [2026-09-04T09:41:06.000Z] Command:       /opt/node22/bin/node /root/.npm/_npx/ba4f1959e38407b5/node_modules/.bin/firebase deploy --only hosting --project tal-coordinator
+[debug] [2026-09-04T09:41:06.001Z] CLI Version:   15.29.0
+[debug] [2026-09-04T09:41:06.001Z] Platform:      linux
+[debug] [2026-09-04T09:41:06.001Z] Node Version:  v22.22.2
+[debug] [2026-09-04T09:41:06.002Z] Detected Agent: claude-code_2-1-260_agent
+[debug] [2026-09-04T09:41:06.002Z] Time:          Fri Sep 04 2026 09:41:06 GMT+0000 (Coordinated Universal Time)
+[debug] [2026-09-04T09:41:06.002Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-09-04T09:41:06.041Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-09-04T09:41:08.470Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-09-04T09:41:08.540Z] Running auto auth
+[debug] [2026-09-04T09:41:08.541Z] [iam] checking project tal-coordinator for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-09-04T09:41:08.541Z] No OAuth tokens found
+[debug] [2026-09-04T09:41:08.542Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/tal-coordinator:testIamPermissions [none]
+[debug] [2026-09-04T09:41:08.542Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/tal-coordinator:testIamPermissions  x-goog-user-project=tal-coordinator
+[debug] [2026-09-04T09:41:08.542Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/tal-coordinator:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-09-04T09:41:08.746Z] *** [apiv2] error from fetch(https://firebase-public.firebaseio.com/cli.json, {"headers":{},"method":"GET","dispatcher":{"_events":{},"_eventsCount":0}}): Error: Request was cancelled.
+[warn] ⚠  Unable to fetch the CLI MOTD and remote config. This is not a fatal error, but may indicate an issue with your network connection. 
+[debug] [2026-09-04T09:41:08.747Z] Failed to fetch MOTD FirebaseError: Failed to make request to https://firebase-public.firebaseio.com/cli.json
+[debug] [2026-09-04T09:41:09.126Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/tal-coordinator:testIamPermissions 403
+[debug] [2026-09-04T09:41:09.126Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/tal-coordinator:testIamPermissions {"error":{"code":403,"message":"Caller does not have required permission to use project tal-coordinator. Grant the caller the roles/serviceusage.serviceUsageConsumer role, or a custom role with the serviceusage.services.use permission, by visiting https://console.developers.google.com/iam-admin/iam?project=tal-coordinator and then retry. Propagation of the new permission may take a few minutes.","status":"PERMISSION_DENIED","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"USER_PROJECT_DENIED","domain":"googleapis.com","metadata":{"consumer":"projects/tal-coordinator","consoleUrl":"https://console.developers.google.com/iam-admin/iam?project=tal-coordinator","containerInfo":"tal-coordinator","service":"cloudresourcemanager.googleapis.com"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"Caller does not have required permission to use project tal-coordinator. Grant the caller the roles/serviceusage.serviceUsageConsumer role, or a custom role with the serviceusage.services.use permission, by visiting https://console.developers.google.com/iam-admin/iam?project=tal-coordinator and then retry. Propagation of the new permission may take a few minutes."},{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Google developer console IAM admin","url":"https://console.developers.google.com/iam-admin/iam?project=tal-coordinator"}]}]}}
+[debug] [2026-09-04T09:41:09.127Z] [iam] error while checking permissions, command may fail: Request to https://cloudresourcemanager.googleapis.com/v1/projects/tal-coordinator:testIamPermissions had HTTP Error: 403, Caller does not have required permission to use project tal-coordinator. Grant the caller the roles/serviceusage.serviceUsageConsumer role, or a custom role with the serviceusage.services.use permission, by visiting https://console.developers.google.com/iam-admin/iam?project=tal-coordinator and then retry. Propagation of the new permission may take a few minutes.
+[debug] [2026-09-04T09:41:09.128Z] No OAuth tokens found
+[debug] [2026-09-04T09:41:09.128Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/tal-coordinator [none]
+[debug] [2026-09-04T09:41:09.594Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/tal-coordinator 403
+[debug] [2026-09-04T09:41:09.595Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/tal-coordinator {"error":{"code":403,"message":"The caller does not have permission","status":"PERMISSION_DENIED"}}
+[debug] [2026-09-04T09:41:09.595Z] Request to https://firebase.googleapis.com/v1beta1/projects/tal-coordinator had HTTP Error: 403, The caller does not have permission
+[debug] [2026-09-04T09:41:09.596Z] FirebaseError: Request to https://firebase.googleapis.com/v1beta1/projects/tal-coordinator had HTTP Error: 403, The caller does not have permission
+    at responseToError (/root/.npm/_npx/ba4f1959e38407b5/node_modules/firebase-tools/lib/responseToError.js:53:12)
+    at RetryOperation._fn (/root/.npm/_npx/ba4f1959e38407b5/node_modules/firebase-tools/lib/apiv2.js:415:77)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[error] 
+[error] Error: Failed to get Firebase project tal-coordinator. Please make sure the project exists and your account has permission to access it.
+[debug] [2026-09-04T09:41:28.571Z] ----------------------------------------------------------------------
+[debug] [2026-09-04T09:41:28.573Z] Command:       /opt/node22/bin/node /root/.npm/_npx/ba4f1959e38407b5/node_modules/.bin/firebase deploy --only hosting --project tal-coordinator
+[debug] [2026-09-04T09:41:28.574Z] CLI Version:   15.29.0
+[debug] [2026-09-04T09:41:28.574Z] Platform:      linux
+[debug] [2026-09-04T09:41:28.575Z] Node Version:  v22.22.2
+[debug] [2026-09-04T09:41:28.575Z] Detected Agent: claude-code_2-1-260_agent
+[debug] [2026-09-04T09:41:28.575Z] Time:          Fri Sep 04 2026 09:41:28 GMT+0000 (Coordinated Universal Time)
+[debug] [2026-09-04T09:41:28.575Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-09-04T09:41:28.608Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-09-04T09:41:29.893Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-09-04T09:41:29.953Z] Running auto auth
+[debug] [2026-09-04T09:41:29.954Z] [iam] checking project tal-coordinator for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-09-04T09:41:29.955Z] No OAuth tokens found
+[debug] [2026-09-04T09:41:29.956Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/tal-coordinator:testIamPermissions [none]
+[debug] [2026-09-04T09:41:29.956Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/tal-coordinator:testIamPermissions  x-goog-user-project=tal-coordinator
+[debug] [2026-09-04T09:41:29.956Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/tal-coordinator:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-09-04T09:41:30.161Z] *** [apiv2] error from fetch(https://firebase-public.firebaseio.com/cli.json, {"headers":{},"method":"GET","dispatcher":{"_events":{},"_eventsCount":0}}): Error: Request was cancelled.
+[warn] ⚠  Unable to fetch the CLI MOTD and remote config. This is not a fatal error, but may indicate an issue with your network connection. 
+[debug] [2026-09-04T09:41:30.162Z] Failed to fetch MOTD FirebaseError: Failed to make request to https://firebase-public.firebaseio.com/cli.json
+[debug] [2026-09-04T09:41:30.597Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/tal-coordinator:testIamPermissions 403
+[debug] [2026-09-04T09:41:30.598Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/tal-coordinator:testIamPermissions {"error":{"code":403,"message":"Caller does not have required permission to use project tal-coordinator. Grant the caller the roles/serviceusage.serviceUsageConsumer role, or a custom role with the serviceusage.services.use permission, by visiting https://console.developers.google.com/iam-admin/iam?project=tal-coordinator and then retry. Propagation of the new permission may take a few minutes.","status":"PERMISSION_DENIED","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"USER_PROJECT_DENIED","domain":"googleapis.com","metadata":{"service":"cloudresourcemanager.googleapis.com","consumer":"projects/tal-coordinator","consoleUrl":"https://console.developers.google.com/iam-admin/iam?project=tal-coordinator","containerInfo":"tal-coordinator"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"Caller does not have required permission to use project tal-coordinator. Grant the caller the roles/serviceusage.serviceUsageConsumer role, or a custom role with the serviceusage.services.use permission, by visiting https://console.developers.google.com/iam-admin/iam?project=tal-coordinator and then retry. Propagation of the new permission may take a few minutes."},{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Google developer console IAM admin","url":"https://console.developers.google.com/iam-admin/iam?project=tal-coordinator"}]}]}}
+[debug] [2026-09-04T09:41:30.598Z] [iam] error while checking permissions, command may fail: Request to https://cloudresourcemanager.googleapis.com/v1/projects/tal-coordinator:testIamPermissions had HTTP Error: 403, Caller does not have required permission to use project tal-coordinator. Grant the caller the roles/serviceusage.serviceUsageConsumer role, or a custom role with the serviceusage.services.use permission, by visiting https://console.developers.google.com/iam-admin/iam?project=tal-coordinator and then retry. Propagation of the new permission may take a few minutes.
+[debug] [2026-09-04T09:41:30.599Z] No OAuth tokens found
+[debug] [2026-09-04T09:41:30.600Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/tal-coordinator [none]
+[debug] [2026-09-04T09:41:31.191Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/tal-coordinator 403
+[debug] [2026-09-04T09:41:31.192Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/tal-coordinator {"error":{"code":403,"message":"The caller does not have permission","status":"PERMISSION_DENIED"}}
+[debug] [2026-09-04T09:41:31.192Z] Request to https://firebase.googleapis.com/v1beta1/projects/tal-coordinator had HTTP Error: 403, The caller does not have permission
+[debug] [2026-09-04T09:41:31.193Z] FirebaseError: Request to https://firebase.googleapis.com/v1beta1/projects/tal-coordinator had HTTP Error: 403, The caller does not have permission
+    at responseToError (/root/.npm/_npx/ba4f1959e38407b5/node_modules/firebase-tools/lib/responseToError.js:53:12)
+    at RetryOperation._fn (/root/.npm/_npx/ba4f1959e38407b5/node_modules/firebase-tools/lib/apiv2.js:415:77)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[error] 
+[error] Error: Failed to get Firebase project tal-coordinator. Please make sure the project exists and your account has permission to access it.
