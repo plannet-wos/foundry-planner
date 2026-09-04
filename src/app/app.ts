@@ -41,7 +41,11 @@ export class App {
   protected isSuperAdmin = computed(() => this.auth.isActive() && this.auth.rank() === RANK.SUPERADMIN);
   protected isAllianceAdmin = computed(() => {
     const rank = this.auth.rank();
-    return this.auth.isActive() && (rank === RANK.R4 || rank === RANK.R5);
+    // A state_admin counts too, but only when they personally lead an alliance (allianceId
+    // set on their own account — see account.model.ts's comment) — matches allianceAdminGuard.
+    return this.auth.isActive() && (
+      rank === RANK.R4 || rank === RANK.R5 || (rank === RANK.STATE_ADMIN && !!this.auth.account()?.allianceId)
+    );
   });
   /** The logged-in R4/R5's own alliance — derived from their account doc, not the current URL. */
   protected myAlliance = computed<AllianceRoute | null>(() => {
