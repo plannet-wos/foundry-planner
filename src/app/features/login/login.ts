@@ -28,7 +28,20 @@ import { allianceSlugFromId } from '../../core/models/alliance.model';
           <mat-card-subtitle>Foundry Planner</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
-          @if (!pendingMfaResolver()) {
+          @if (showForgotPassword()) {
+            @if (!resetSent()) {
+              <p class="mfa-hint">Enter your email and we'll send you a link to reset your password.</p>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Email</mat-label>
+                <input matInput [(ngModel)]="resetEmail" (keyup.enter)="sendPasswordReset()" autocomplete="username" />
+              </mat-form-field>
+              @if (error()) {
+                <p class="error">Something went wrong — try again in a moment.</p>
+              }
+            } @else {
+              <p class="mfa-hint">If an account exists for {{ resetEmail }}, a reset link is on its way — check your inbox (and spam folder).</p>
+            }
+          } @else if (!pendingMfaResolver()) {
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Email</mat-label>
               <input matInput [(ngModel)]="email" (keyup.enter)="submit()" autofocus autocomplete="username" />
@@ -40,6 +53,7 @@ import { allianceSlugFromId } from '../../core/models/alliance.model';
             @if (error()) {
               <p class="error">Invalid email or password.</p>
             }
+            <button mat-button class="forgot-link" (click)="openForgotPassword()">Forgot password?</button>
           } @else {
             <p class="mfa-hint">Enter the 6-digit code from your authenticator app.</p>
             <mat-form-field appearance="outline" class="full-width">
@@ -52,7 +66,14 @@ import { allianceSlugFromId } from '../../core/models/alliance.model';
           }
         </mat-card-content>
         <mat-card-actions>
-          @if (!pendingMfaResolver()) {
+          @if (showForgotPassword()) {
+            @if (!resetSent()) {
+              <button mat-flat-button color="primary" (click)="sendPasswordReset()" [disabled]="loading() || !resetEmail">
+                @if (loading()) { <mat-spinner diameter="20"></mat-spinner> } @else { Send reset link }
+              </button>
+            }
+            <button mat-button (click)="cancelForgotPassword()">{{ resetSent() ? 'Back to login' : 'Back' }}</button>
+          } @else if (!pendingMfaResolver()) {
             <button mat-flat-button color="primary" (click)="submit()" [disabled]="loading() || !email || !password">
               @if (loading()) { <mat-spinner diameter="20"></mat-spinner> } @else { Login }
             </button>
@@ -81,6 +102,7 @@ import { allianceSlugFromId } from '../../core/models/alliance.model';
     .mfa-hint { font-size: 13px; opacity: 0.8; margin: 0 0 4px; }
     mat-card-actions { padding: 8px 16px 16px; }
     mat-spinner { display: inline-block; }
+    .forgot-link { align-self: flex-start; font-size: 12px; opacity: 0.8; padding: 0; min-width: 0; }
   `]
 })
 export class Login {
@@ -141,6 +163,42 @@ export class Login {
     this.pendingMfaResolver.set(null);
     this.otp = '';
     this.error.set(false);
+  }
+
+  // --- forgot password ---
+  showForgotPassword = signal(false);
+  resetEmail = '';
+  resetSent = signal(false);
+
+  openForgotPassword(): void {
+    this.resetEmail = this.email;
+    this.resetSent.set(false);
+    this.error.set(false);
+    this.showForgotPassword.set(true);
+  }
+
+  cancelForgotPassword(): void {
+    this.showForgotPassword.set(false);
+    this.resetSent.set(false);
+  }
+
+  async sendPasswordReset(): Promise<void> {
+    if (!this.resetEmail) return;
+    this.loading.set(true);
+    this.error.set(false);
+    try {
+      await this.auth.sendPasswordReset(this.resetEmail);
+    } catch (err) {
+      if ((err as { code?: string }).code !== 'auth/user-not-found') {
+        this.error.set(true);
+        this.loading.set(false);
+        this.cdr.detectChanges();
+        return;
+      }
+    }
+    this.resetSent.set(true);
+    this.loading.set(false);
+    this.cdr.detectChanges();
   }
 
   private async redirectAfterLogin() {

@@ -4,6 +4,7 @@ import { Firestore, doc, onSnapshot } from '@angular/fire/firestore';
 import {
   User,
   signInWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut,
   onAuthStateChanged,
   getMultiFactorResolver,
@@ -163,5 +164,15 @@ export class AuthService {
 
   logout(): void {
     signOut(this.auth);
+  }
+
+  /**
+   * Sends Firebase's own managed "reset your password" email — see plannet-wos's
+   * auth.service.ts (the canonical copy) for the full doc comment on why the caller should
+   * show the same "check your inbox" outcome regardless of whether this throws
+   * auth/user-not-found.
+   */
+  async sendPasswordReset(email: string): Promise<void> {
+    await sendPasswordResetEmail(this.auth, email);
   }
 }
