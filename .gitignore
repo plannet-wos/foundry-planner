@@ -51,3 +51,4 @@ Thumbs.db
 
 # Service account credentials for diagnostic scripts (NEVER commit)
 scripts/.service-account.json
+firebase-debug.log
