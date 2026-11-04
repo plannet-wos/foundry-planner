@@ -1,3 +1,19 @@
+import { TimeKey } from './player.model';
+
+/**
+ * A state alliance's saved 60-player roster, picked by a State Admin on the selection page
+ * (see features/state-selection and core/utils/state-selection.ts). Lives on the alliance
+ * doc rather than on player docs because `players` is open to anyone, while alliance-doc
+ * writes are already limited to State Admins of that state by firestore.rules.
+ */
+export interface StateSelection {
+  playerIds: string[];
+  /** Players the State Admin locked in: Compute always keeps them. A subset of playerIds. */
+  pinnedIds: string[];
+  updatedAt: number;
+  updatedBy?: string;
+}
+
 export interface Alliance {
   id: string;         // "{stateId}-{slug}" composite — see allianceId() below. URL keeps the bare slug; see the rollout plan.
   stateId: string;
@@ -17,6 +33,10 @@ export interface Alliance {
   finalTime?: string;  // legacy — superseded by per-legion times below
   finalTimeL1?: string;
   finalTimeL2?: string;
+  /** state_event only: the 3 battle slots this state alliance plays, set by a State Admin. */
+  battleTimes?: TimeKey[];
+  /** state_event only: the selected roster. When set and non-empty, it replaces "every player in the state" as the event's roster. */
+  selection?: StateSelection;
   createdAt: number;
 }
 

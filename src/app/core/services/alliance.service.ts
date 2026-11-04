@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { Firestore, collection, collectionData, doc, getDoc, setDoc, query, where, serverTimestamp } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
-import { Alliance, allianceId } from '../models/alliance.model';
+import { Alliance, StateSelection, allianceId } from '../models/alliance.model';
+import { TimeKey } from '../models/player.model';
 
 // Alliance CRUD (create/rename/delete) moved to plannet-wos's state-admin dashboard as part
 // of the multi-state rollout — see that repo's core/services/alliance.service.ts and the
@@ -31,6 +32,11 @@ export class AllianceService {
 
   async updateAlliance(id: string, updates: Partial<Pick<Alliance, 'finalTime' | 'finalTimeL1' | 'finalTimeL2'>>): Promise<void> {
     await setDoc(doc(this.firestore, `alliances/${id}`), updates, { merge: true });
+  }
+
+  /** State Admin only (firestore.rules' alliances update rule): a state alliance's battle times and selected roster. */
+  async saveStateSelection(id: string, battleTimes: TimeKey[], selection: StateSelection): Promise<void> {
+    await setDoc(doc(this.firestore, `alliances/${id}`), { battleTimes, selection }, { merge: true });
   }
 
   /**

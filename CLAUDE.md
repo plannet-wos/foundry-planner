@@ -58,6 +58,12 @@ docs/
 - `availability`: `{ time_2, time_7, time_12, time_14, time_19 }` — all booleans
 - `role`: `'main' | 'sub' | 'unassigned'`
 - `createdAt`: number (Unix timestamp)
+- `labyrinthScore?`: number — entered by the player's R4/R5 on the alliance dashboard; drives state alliance selection priority
+
+### `alliances` collection (state alliances only)
+- `type: 'state_event'` marks a state alliance; its roster is every real alliance's players in the state
+- `battleTimes?`: the 3 `TimeKey`s (`time_12`, …) it plays, set by a State Admin
+- `selection?`: `{ playerIds, pinnedIds, updatedAt, updatedBy }` — the 60 picked on `/:stateId/state/:slug/selection` (see `core/utils/state-selection.ts`). When set, it narrows the state alliance's roster everywhere to those players.
 
 ### `tasks` collection
 - **Document ID:** generated string (e.g. `task_1712165039201`)

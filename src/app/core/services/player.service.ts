@@ -61,6 +61,12 @@ export class PlayerService {
     await setDoc(playerRef, updateObj, { merge: true });
   }
 
+  /** Set or clear the player's labyrinth score. Pass `null` to remove the field. */
+  async updateLabyrinthScore(playerId: string, labyrinthScore: number | null): Promise<void> {
+    const value = labyrinthScore === null ? deleteField() : labyrinthScore;
+    await setDoc(doc(this.firestore, `players/${playerId}`), { labyrinthScore: value }, { merge: true });
+  }
+
   async deletePlayer(playerId: string): Promise<void> {
     await deleteDoc(doc(this.firestore, `players/${playerId}`));
   }
@@ -74,8 +80,12 @@ export class PlayerService {
    * player from every state once more than one existed. `excludeAllianceId` is normally the
    * state-event shell itself; it's excluded from the alliance list even though it's already
    * filtered out by type, in case a caller passes something else.
+   *
+   * `onlyIds`: a state alliance's saved selection (Alliance.selection.playerIds). When it's
+   * non-empty the roster is narrowed to exactly those players; empty or absent keeps the
+   * whole state, as before any selection was made.
    */
-  async getPlayersForStateEvent(stateId: string, excludeAllianceId: string): Promise<Player[]> {
+  async getPlayersForStateEvent(stateId: string, excludeAllianceId: string, onlyIds?: string[]): Promise<Player[]> {
     const alliancesCol = collection(this.firestore, 'alliances');
     const allianceSnap = await getDocs(query(alliancesCol, where('stateId', '==', stateId)));
     const realAllianceIds = allianceSnap.docs
@@ -92,6 +102,9 @@ export class PlayerService {
     const results = await Promise.all(
       chunks.map((ids) => getDocs(query(this.playersCollection, where('allianceId', 'in', ids)))),
     );
-    return results.flatMap((snap) => snap.docs.map((d) => ({ ...d.data(), id: d.id } as Player)));
+    const players = results.flatMap((snap) => snap.docs.map((d) => ({ ...d.data(), id: d.id } as Player)));
+    if (!onlyIds?.length) return players;
+    const keep = new Set(onlyIds);
+    return players.filter((p) => keep.has(p.id));
   }
 }

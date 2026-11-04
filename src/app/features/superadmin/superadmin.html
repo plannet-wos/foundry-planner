@@ -68,6 +68,11 @@
               <span *ngIf="alliance.type === 'state_event'" class="cross-alliance-badge">State Event</span>
             </div>
             <div class="alliance-actions">
+              @if (alliance.type === 'state_event' && canSelectFor(alliance)) {
+                <button mat-flat-button color="primary" (click)="openSelection(alliance)">
+                  <mat-icon>groups</mat-icon> Select players
+                </button>
+              }
               <button mat-stroked-button (click)="navigateTo(alliance)">
                 <mat-icon>dashboard</mat-icon> Open Dashboard
               </button>

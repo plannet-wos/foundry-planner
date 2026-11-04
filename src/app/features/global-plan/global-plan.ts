@@ -66,7 +66,7 @@ export class GlobalPlan implements OnInit {
     // A state-event shell has no signups of its own — its roster is every real
     // alliance's players in the same state. See admin-dashboard.ts for the same split.
     this.players$ = alliance?.type === 'state_event'
-      ? from(this.playerService.getPlayersForStateEvent(alliance.stateId, allianceId))
+      ? from(this.playerService.getPlayersForStateEvent(alliance.stateId, allianceId, alliance.selection?.playerIds))
       : this.playerService.getPlayersByAlliance(allianceId);
 
     this.selectedLocationAssignments$ = combineLatest([

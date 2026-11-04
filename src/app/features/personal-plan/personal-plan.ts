@@ -79,7 +79,7 @@ export class PersonalPlan implements OnInit {
     // A state-event shell has no signups of its own — its roster is every real
     // alliance's players in the same state. See admin-dashboard.ts for the same split.
     this.players$ = this.alliance?.type === 'state_event'
-      ? from(this.playerService.getPlayersForStateEvent(this.alliance.stateId, allianceId))
+      ? from(this.playerService.getPlayersForStateEvent(this.alliance.stateId, allianceId, this.alliance.selection?.playerIds))
       : this.playerService.getPlayersByAlliance(allianceId);
 
     this.battleInfo$ = combineLatest([this.players$, this.searchId$]).pipe(

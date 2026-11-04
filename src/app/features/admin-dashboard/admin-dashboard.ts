@@ -51,7 +51,7 @@ export class AdminDashboard implements OnInit {
   sortedPlayers$!: Observable<Player[]>;
   sortKey = new BehaviorSubject<'name' | 'legion'>('name');
 
-  displayedColumns: string[] = ['inGameName', 'inGameId', 't2', 't7', 't12', 't14', 't19', 'tier', 'legion', 'actions'];
+  displayedColumns: string[] = ['inGameName', 'inGameId', 'labyrinth', 't2', 't7', 't12', 't14', 't19', 'tier', 'legion', 'actions'];
 
   finalTimeL1     = '';
   finalTimeL2     = '';
@@ -68,7 +68,7 @@ export class AdminDashboard implements OnInit {
     // Load players based on alliance type
     if (this.alliance?.type === 'state_event') {
       // State event: roster is every real alliance's players in the same state.
-      this.players$ = from(this.playerService.getPlayersForStateEvent(this.alliance.stateId, this.allianceId));
+      this.players$ = from(this.playerService.getPlayersForStateEvent(this.alliance.stateId, this.allianceId, this.alliance.selection?.playerIds));
     } else {
       // Normal alliance: load only players for this alliance
       this.players$ = this.playerService.getPlayersByAlliance(this.allianceId);
@@ -172,7 +172,12 @@ export class AdminDashboard implements OnInit {
     ref.afterClosed().subscribe(async (result: EditPlayerDialogResult | undefined) => {
       if (!result) return;
       try {
-        await this.playerService.savePlayer({ ...player, ...result });
+        // labyrinthScore goes through its own write so clearing it really removes the field
+        // (a merge write of the old player object would put the old score straight back).
+        const { labyrinthScore, ...edits } = result;
+        const { labyrinthScore: _previous, ...base } = player;
+        await this.playerService.savePlayer({ ...base, ...edits });
+        await this.playerService.updateLabyrinthScore(player.id, labyrinthScore);
         this.snackBar.open(`${result.inGameName} updated`, 'Close', { duration: 2000 });
       } catch (e) {
         this.snackBar.open('Failed to update player', 'Close', { duration: 3000 });

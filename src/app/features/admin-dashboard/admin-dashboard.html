@@ -66,6 +66,17 @@
           <td mat-cell *matCellDef="let player">{{player.id}}</td>
         </ng-container>
 
+        <ng-container matColumnDef="labyrinth">
+          <th mat-header-cell *matHeaderCellDef>Labyrinth</th>
+          <td mat-cell *matCellDef="let player">
+            @if (player.labyrinthScore != null) {
+              {{ player.labyrinthScore | number }}
+            } @else {
+              <span class="no-score" title="No labyrinth score yet. Use Edit to add it.">—</span>
+            }
+          </td>
+        </ng-container>
+
         <ng-container matColumnDef="t2">
           <th mat-header-cell *matHeaderCellDef>02:00</th>
           <td mat-cell *matCellDef="let player">
