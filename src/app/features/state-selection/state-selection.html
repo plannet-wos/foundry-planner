@@ -1,0 +1,174 @@
+<div class="selection-container">
+  <div class="page-header">
+    <a mat-icon-button routerLink="/superadmin" title="Back to alliances">
+      <mat-icon>arrow_back</mat-icon>
+    </a>
+    <div>
+      <h2>{{ alliance()?.name || 'State alliance' }}</h2>
+      <p class="subtitle">Select the players for this state alliance</p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <mat-spinner diameter="40"></mat-spinner>
+  } @else if (alliance()?.type !== 'state_event') {
+    <mat-card><mat-card-content>This alliance isn't a state alliance.</mat-card-content></mat-card>
+  } @else {
+    <mat-card>
+      <mat-card-header><mat-card-title>Battle times</mat-card-title></mat-card-header>
+      <mat-card-content>
+        <p class="hint">Pick the {{ BATTLE_TIME_COUNT }} times this state alliance plays (UTC).</p>
+        <div class="time-picker">
+          @for (t of TIME_KEYS; track t) {
+            <mat-checkbox
+              [checked]="isTimeChosen(t)"
+              [disabled]="!isTimeChosen(t) && timesReady()"
+              (change)="toggleTime(t, $event.checked)">
+              {{ TIME_LABEL[t] }}
+            </mat-checkbox>
+          }
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="summary-card">
+      <mat-card-content>
+        <div class="counters">
+          <div class="counter" [class.short]="selected().length < ROSTER_SIZE">
+            <span class="counter__value">{{ selected().length }}/{{ ROSTER_SIZE }}</span>
+            <span class="counter__label">Selected</span>
+          </div>
+          @for (t of battleTimes(); track t) {
+            <div class="counter" [class.short]="(coverage()[t] ?? 0) < PLAYERS_PER_TIME">
+              <span class="counter__value">{{ coverage()[t] ?? 0 }}/{{ PLAYERS_PER_TIME }}</span>
+              <span class="counter__label">Available at {{ TIME_LABEL[t] }}</span>
+            </div>
+          }
+        </div>
+
+        <div class="actions">
+          <button mat-stroked-button (click)="compute()" [disabled]="!timesReady()"
+                  matTooltip="Rebuilds the list from labyrinth scores. Pinned players are kept.">
+            <mat-icon>auto_fix_high</mat-icon> Compute
+          </button>
+          <button mat-flat-button color="primary" (click)="save()" [disabled]="!timesReady() || saving() || !dirty()">
+            <mat-icon>save</mat-icon> Save
+          </button>
+          @if (dirty()) { <span class="unsaved">Unsaved changes</span> }
+        </div>
+
+        @if (!timesReady()) {
+          <p class="warning"><mat-icon>info</mat-icon> Pick {{ BATTLE_TIME_COUNT }} battle times to compute a selection.</p>
+        }
+        @if (timesReady() && selected().length > 0) {
+          @for (s of shortfalls(); track s.time) {
+            <p class="warning">
+              <mat-icon>warning</mat-icon>
+              {{ TIME_LABEL[s.time] }}: {{ s.missing }} more player(s) available at this time are needed.
+            </p>
+          }
+        }
+        @if (missingScores() > 0) {
+          <p class="note"><mat-icon>info</mat-icon> {{ missingScores() }} player(s) have no labyrinth score yet and are ranked last. Their R4/R5 can add it on the alliance dashboard.</p>
+        }
+        @if (takenElsewhere().size > 0) {
+          <p class="note"><mat-icon>info</mat-icon> {{ takenElsewhere().size }} player(s) are already selected for another state alliance and are left out.</p>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <ng-template #playerCells let-p>
+      <td class="name">
+        {{ p.inGameName }}
+        <span class="player-id">{{ p.id }}</span>
+      </td>
+      <td class="alliance">{{ allianceName(p) }}</td>
+      <td class="num">
+        @if (p.labyrinthScore != null) { {{ p.labyrinthScore | number }} } @else { <span class="no-score">—</span> }
+      </td>
+      @for (t of battleTimes(); track t) {
+        <td class="time"><span class="status-indicator" [class.available]="p.availability?.[t]"></span></td>
+      }
+    </ng-template>
+
+    <mat-card>
+      <mat-card-header><mat-card-title>Selected ({{ selected().length }})</mat-card-title></mat-card-header>
+      <mat-card-content>
+        @if (selected().length === 0) {
+          <p class="empty">Nobody selected yet. Press Compute to build the list.</p>
+        } @else {
+          <div class="table-scroll">
+            <table class="player-table">
+              <thead>
+                <tr>
+                  <th class="rank">#</th><th>Player</th><th>Alliance</th><th class="num">Labyrinth</th>
+                  @for (t of battleTimes(); track t) { <th class="time">{{ TIME_LABEL[t] }}</th> }
+                  <th class="row-actions"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of selected(); track p.id; let i = $index) {
+                  <tr [class.pinned]="isPinned(p)">
+                    <td class="rank">{{ i + 1 }}</td>
+                    <ng-container *ngTemplateOutlet="playerCells; context: { $implicit: p }"></ng-container>
+                    <td class="row-actions">
+                      <button mat-icon-button (click)="togglePin(p)" class="pin-btn" [class.pin-btn--on]="isPinned(p)"
+                              [matTooltip]="isPinned(p) ? 'Unpin' : 'Pin: Compute will always keep this player'">
+                        <mat-icon>push_pin</mat-icon>
+                      </button>
+                      <button mat-icon-button color="warn" (click)="remove(p)" matTooltip="Remove from selection">
+                        <mat-icon>remove_circle_outline</mat-icon>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header><mat-card-title>Other available players ({{ pool().length }})</mat-card-title></mat-card-header>
+      <mat-card-content>
+        @if (!timesReady()) {
+          <p class="empty">Pick the battle times first.</p>
+        } @else {
+          <mat-form-field appearance="outline" class="filter">
+            <mat-label>Search by name, ID or alliance</mat-label>
+            <input matInput [ngModel]="poolFilter()" (ngModelChange)="poolFilter.set($event)" />
+          </mat-form-field>
+          @if (filteredPool().length === 0) {
+            <p class="empty">No other players are available at these times.</p>
+          } @else {
+            <div class="table-scroll">
+              <table class="player-table">
+                <thead>
+                  <tr>
+                    <th>Player</th><th>Alliance</th><th class="num">Labyrinth</th>
+                    @for (t of battleTimes(); track t) { <th class="time">{{ TIME_LABEL[t] }}</th> }
+                    <th class="row-actions"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of filteredPool(); track p.id) {
+                    <tr>
+                      <ng-container *ngTemplateOutlet="playerCells; context: { $implicit: p }"></ng-container>
+                      <td class="row-actions">
+                        <button mat-icon-button color="primary" (click)="add(p)" [disabled]="full()"
+                                [matTooltip]="full() ? 'The selection is full. Remove someone first.' : 'Add to selection'">
+                          <mat-icon>add_circle_outline</mat-icon>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

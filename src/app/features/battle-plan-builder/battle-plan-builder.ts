@@ -108,7 +108,7 @@ export class BattlePlanBuilder implements OnInit {
     // Load players based on alliance type
     if (this.alliance?.type === 'state_event') {
       // State event: roster is every real alliance's players in the same state.
-      this.players$ = from(this.playerService.getPlayersForStateEvent(this.alliance.stateId, this.allianceId));
+      this.players$ = from(this.playerService.getPlayersForStateEvent(this.alliance.stateId, this.allianceId, this.alliance.selection?.playerIds));
     } else {
       // Normal alliance: load only players for this alliance
       this.players$ = this.playerService.getPlayersByAlliance(this.allianceId);

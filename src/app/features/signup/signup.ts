@@ -73,7 +73,7 @@ export class Signup implements OnInit {
       this.isCrossAlliance = true;
       this.isLoadingPlayers = true;
       try {
-        this.availablePlayers = await this.playerService.getPlayersForStateEvent(this.alliance.stateId, this.allianceId);
+        this.availablePlayers = await this.playerService.getPlayersForStateEvent(this.alliance.stateId, this.allianceId, this.alliance.selection?.playerIds);
       } catch (e) {
         console.error('Failed to load players for state event', e);
         this.snackBar.open('Failed to load player list', 'Close', { duration: 3000 });

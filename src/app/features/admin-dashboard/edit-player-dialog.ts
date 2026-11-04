@@ -14,6 +14,8 @@ export interface EditPlayerDialogData {
 export interface EditPlayerDialogResult {
   inGameName: string;
   availability: Player['availability'];
+  /** null = cleared (no score). */
+  labyrinthScore: number | null;
 }
 
 @Component({
@@ -26,6 +28,11 @@ export interface EditPlayerDialogResult {
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>In-Game Name</mat-label>
         <input matInput [(ngModel)]="name" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Labyrinth score</mat-label>
+        <input matInput type="number" min="0" step="1" [(ngModel)]="labyrinth" />
       </mat-form-field>
 
       <p class="avail-label">Availability</p>
@@ -55,11 +62,15 @@ export class EditPlayerDialog {
 
   name = this.data.player.inGameName;
   avail = { ...this.data.player.availability };
+  labyrinth: number | null = this.data.player.labyrinthScore ?? null;
 
   save() {
     const result: EditPlayerDialogResult = {
       inGameName: this.name.trim(),
-      availability: this.avail
+      availability: this.avail,
+      labyrinthScore: this.labyrinth === null || (this.labyrinth as unknown) === '' || isNaN(Number(this.labyrinth))
+        ? null
+        : Math.max(0, Math.round(Number(this.labyrinth))),
     };
     this.dialogRef.close(result);
   }

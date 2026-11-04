@@ -12,6 +12,8 @@ import { PersonalPlan } from './features/personal-plan/personal-plan';
 import { GlobalPlan } from './features/global-plan/global-plan';
 import { superadminGuard } from './core/guards/superadmin.guard';
 import { allianceAdminGuard } from './core/guards/alliance-admin.guard';
+import { stateAdminGuard } from './core/guards/state-admin.guard';
+import { StateSelectionPage } from './features/state-selection/state-selection';
 
 export const routes: Routes = [
   // Landing
@@ -31,6 +33,9 @@ export const routes: Routes = [
   { path: ':stateId/admin/:allianceSlug',              component: AdminDashboard,    canActivate: [allianceAdminGuard] },
   { path: ':stateId/admin/:allianceSlug/task-library', component: TaskLibrary,       canActivate: [allianceAdminGuard] },
   { path: ':stateId/admin/:allianceSlug/plan-builder', component: BattlePlanBuilder, canActivate: [allianceAdminGuard] },
+
+  // State alliance roster selection — State Admins of this state (and the superadmin) only.
+  { path: ':stateId/state/:allianceSlug/selection',    component: StateSelectionPage, canActivate: [stateAdminGuard] },
 
   // Player-facing routes (public, alliance-scoped)
   { path: ':stateId/alliance/:allianceSlug',           component: Signup },

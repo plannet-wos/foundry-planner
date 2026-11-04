@@ -81,6 +81,15 @@ export class SuperadminDashboard implements OnInit {
     this.router.navigate([alliance.stateId, 'admin', alliance.slug]);
   }
 
+  /** Mirrors stateAdminGuard: the superadmin, or a State Admin of the alliance's own state. */
+  canSelectFor(alliance: Alliance): boolean {
+    return this.isSuperadmin || alliance.stateId === this.myStateId;
+  }
+
+  openSelection(alliance: Alliance) {
+    this.router.navigate([alliance.stateId, 'state', alliance.slug, 'selection']);
+  }
+
   async createStateEvent() {
     const stateId = this.isSuperadmin ? this.newEventStateId : this.myStateId;
     const slug = this.newEventSlug.trim();
