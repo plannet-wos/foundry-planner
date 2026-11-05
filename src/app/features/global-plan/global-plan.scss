@@ -64,6 +64,7 @@
     right: -4px;
   }
 
+  &:hover { z-index: 100; }
   &:hover .pin-tooltip { display: block; }
 }
 
@@ -72,7 +73,8 @@
   position: absolute;
   bottom: calc(100% + 6px);
   left: 50%;
-  transform: translateX(-50%);
+  // --tip-dx/--tip-dy and .below are set by MapViewer to keep it in the frame.
+  transform: translate(calc(-50% + var(--tip-dx, 0px)), var(--tip-dy, 0px));
   background: rgba(20,20,30,0.92);
   color: white;
   padding: 8px 12px;
@@ -82,6 +84,8 @@
   pointer-events: none;
   font-size: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+
+  &.below { bottom: auto; top: calc(100% + 6px); }
 }
 
 .task-group {
