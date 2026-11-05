@@ -134,3 +134,11 @@
 .no-score {
   color: #999;
 }
+
+.view-only-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  opacity: 0.75;
+}
