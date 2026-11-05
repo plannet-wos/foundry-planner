@@ -26,7 +26,8 @@ const BATTLE_TIME_COUNT = 3;
 /**
  * State Admin page for one state alliance: pick its 3 battle times, compute the 60-player
  * roster (see core/utils/state-selection.ts), adjust it by hand, and save it on the alliance
- * doc. The candidate pool is every player of every real alliance in the state, minus anyone
+ * doc. The candidate pool is every player of every real alliance in the state who wants to
+ * play the state event (`wantsStateEvent`), minus anyone
  * already saved in another state alliance of the same state (a player can only be in one
  * alliance in game).
  */
@@ -77,13 +78,14 @@ export class StateSelectionPage implements OnInit {
     return this.players().filter((p) => ids.has(p.id)).sort(comparePriority(this.battleTimes()));
   });
 
-  /** Everyone who could still be added: available at a battle time, not selected, not taken elsewhere. */
+  /** Everyone who could still be added: opted in to the state event, available at a battle time,
+   *  not selected, not taken elsewhere. */
   readonly pool = computed(() => {
     const times = this.battleTimes();
     const ids = new Set(this.selectedIds());
     const taken = this.takenElsewhere();
     return this.players()
-      .filter((p) => !ids.has(p.id) && !taken.has(p.id) && times.some((t) => p.availability?.[t]))
+      .filter((p) => p.wantsStateEvent && !ids.has(p.id) && !taken.has(p.id) && times.some((t) => p.availability?.[t]))
       .sort(comparePriority(times));
   });
 
@@ -145,7 +147,7 @@ export class StateSelectionPage implements OnInit {
 
   compute() {
     const taken = this.takenElsewhere();
-    const candidates = this.players().filter((p) => !taken.has(p.id));
+    const candidates = this.players().filter((p) => p.wantsStateEvent && !taken.has(p.id));
     const result = computeSelection(candidates, this.battleTimes(), [...this.pinnedIds()]);
     this.selectedIds.set(result.playerIds);
     this.dirty.set(true);
