@@ -18,6 +18,7 @@ export class MapViewer implements AfterViewInit, OnDestroy {
 
   @ViewChild('wrapper') wrapper!: ElementRef<HTMLElement>;
   @ViewChild('content') content!: ElementRef<HTMLElement>;
+  @ViewChild('overlay') overlay!: ElementRef<HTMLElement>;
 
   readonly scale        = signal(1);
   readonly translateX   = signal(0);
@@ -76,13 +77,78 @@ export class MapViewer implements AfterViewInit, OnDestroy {
       this.translateX.set(0);
       this.translateY.set(0);
     }
+    this.scheduleFitTooltips();
   };
+
+  // Pin tooltips (`.pin-tooltip`, projected by the pages) sit above their pin
+  // by default, but the wrapper clips with overflow:hidden, so a tooltip on a
+  // pin near an edge would be cut off. Whenever one becomes visible (hover/tap)
+  // or the map changes, flip it below the pin if there's more room there and
+  // shift it back inside the visible frame.
+  private readonly _onPinPointer = (e: Event) => {
+    const pin = (e.target as HTMLElement).closest?.('.map-pin');
+    pin?.querySelectorAll<HTMLElement>('.pin-tooltip').forEach(t => this.fitTooltip(t));
+  };
+
+  private fitFrame = 0;
+  private resizeObserver?: ResizeObserver;
+  private mutationObserver?: MutationObserver;
+
+  private scheduleFitTooltips() {
+    if (this.fitFrame) return;
+    this.fitFrame = requestAnimationFrame(() => {
+      this.fitFrame = 0;
+      this.overlay?.nativeElement
+        .querySelectorAll<HTMLElement>('.pin-tooltip')
+        .forEach(t => this.fitTooltip(t));
+    });
+  }
+
+  private fitTooltip(tip: HTMLElement) {
+    tip.classList.remove('below');
+    tip.style.setProperty('--tip-dx', '0px');
+    tip.style.setProperty('--tip-dy', '0px');
+    if (tip.getClientRects().length === 0) return; // not displayed
+
+    const pad   = 4;
+    const frame = this.wrapper.nativeElement.getBoundingClientRect();
+    const pin   = tip.parentElement!.getBoundingClientRect();
+    let r = tip.getBoundingClientRect();
+
+    if (r.top < frame.top + pad && frame.bottom - pin.bottom > pin.top - frame.top) {
+      tip.classList.add('below');
+      r = tip.getBoundingClientRect();
+    }
+
+    let dx = 0, dy = 0;
+    if (r.right  > frame.right  - pad) dx = frame.right  - pad - r.right;
+    if (r.left + dx < frame.left + pad) dx = frame.left + pad - r.left;
+    if (r.bottom > frame.bottom - pad) dy = frame.bottom - pad - r.bottom;
+    if (r.top  + dy < frame.top  + pad) dy = frame.top  + pad - r.top;
+
+    // Offsets are applied inside the zoomed content (and the pin's own hover
+    // scale), so convert screen px back to the tooltip's local px.
+    const s = r.width / tip.offsetWidth || 1;
+    tip.style.setProperty('--tip-dx', `${dx / s}px`);
+    tip.style.setProperty('--tip-dy', `${dy / s}px`);
+  }
 
   ngAfterViewInit() {
     const el = this.content.nativeElement;
     el.addEventListener('touchstart', this._onTouchStart, { passive: false });
     el.addEventListener('touchmove',  this._onTouchMove,  { passive: false });
     el.addEventListener('touchend',   this._onTouchEnd,   { passive: true  });
+
+    const overlay = this.overlay.nativeElement;
+    overlay.addEventListener('mouseover', this._onPinPointer);
+    overlay.addEventListener('click',     this._onPinPointer);
+    // Pins scale up on hover/select with a transition; refit once it settles.
+    overlay.addEventListener('transitionend', this._onPinPointer);
+    this.resizeObserver = new ResizeObserver(() => this.scheduleFitTooltips());
+    this.resizeObserver.observe(this.wrapper.nativeElement);
+    this.mutationObserver = new MutationObserver(() => this.scheduleFitTooltips());
+    this.mutationObserver.observe(overlay, { childList: true, subtree: true, characterData: true });
+    this.scheduleFitTooltips();
   }
 
   ngOnDestroy() {
@@ -92,6 +158,15 @@ export class MapViewer implements AfterViewInit, OnDestroy {
       el.removeEventListener('touchmove',  this._onTouchMove);
       el.removeEventListener('touchend',   this._onTouchEnd);
     }
+    const overlay = this.overlay?.nativeElement;
+    if (overlay) {
+      overlay.removeEventListener('mouseover', this._onPinPointer);
+      overlay.removeEventListener('click',     this._onPinPointer);
+      overlay.removeEventListener('transitionend', this._onPinPointer);
+    }
+    this.resizeObserver?.disconnect();
+    this.mutationObserver?.disconnect();
+    if (this.fitFrame) cancelAnimationFrame(this.fitFrame);
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   }
 
@@ -108,6 +183,7 @@ export class MapViewer implements AfterViewInit, OnDestroy {
     this.scale.set(1);
     this.translateX.set(0);
     this.translateY.set(0);
+    this.scheduleFitTooltips();
   }
 
   @HostListener('document:fullscreenchange')

@@ -1,7 +1,7 @@
 <div class="map-viewer-wrapper" #wrapper [class.is-fullscreen]="isFullscreen()">
   <div class="map-content" #content [style.transform]="transformStyle()">
     <img [src]="src" class="map-img" draggable="false" alt="Battle Map">
-    <div class="map-overlay">
+    <div class="map-overlay" #overlay>
       <ng-content></ng-content>
     </div>
   </div>
