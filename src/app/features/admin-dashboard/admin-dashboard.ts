@@ -51,7 +51,7 @@ export class AdminDashboard implements OnInit {
   sortedPlayers$!: Observable<Player[]>;
   sortKey = new BehaviorSubject<'name' | 'legion'>('name');
 
-  displayedColumns: string[] = ['inGameName', 'inGameId', 'labyrinth', 't2', 't7', 't12', 't14', 't19', 'tier', 'legion', 'actions'];
+  displayedColumns: string[] = ['inGameName', 'inGameId', 'labyrinth', 'stateEvent', 't2', 't7', 't12', 't14', 't19', 'tier', 'legion', 'actions'];
 
   finalTimeL1     = '';
   finalTimeL2     = '';

@@ -71,6 +71,7 @@
         @if (missingScores() > 0) {
           <p class="note"><mat-icon>info</mat-icon> {{ missingScores() }} player(s) have no labyrinth score yet and are ranked last. Their R4/R5 can add it on the alliance dashboard.</p>
         }
+        <p class="note"><mat-icon>info</mat-icon> Only players who want to play the state event are candidates. Their R4/R5 can mark it on the alliance dashboard.</p>
         @if (takenElsewhere().size > 0) {
           <p class="note"><mat-icon>info</mat-icon> {{ takenElsewhere().size }} player(s) are already selected for another state alliance and are left out.</p>
         }

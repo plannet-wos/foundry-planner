@@ -77,6 +77,14 @@
           </td>
         </ng-container>
 
+        <ng-container matColumnDef="stateEvent">
+          <th mat-header-cell *matHeaderCellDef title="Wants to play state event">State event</th>
+          <td mat-cell *matCellDef="let player">
+            <span class="status-indicator" [class.available]="player.wantsStateEvent"
+                  [title]="player.wantsStateEvent ? 'Wants to play state event' : 'Not opted in to state event. Use Edit to change.'"></span>
+          </td>
+        </ng-container>
+
         <ng-container matColumnDef="t2">
           <th mat-header-cell *matHeaderCellDef>02:00</th>
           <td mat-cell *matCellDef="let player">

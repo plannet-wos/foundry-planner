@@ -33,6 +33,9 @@ export interface Player {
   /** Labyrinth score, entered by the player's own R4/R5. Drives state-alliance selection
    *  priority (higher first); omitted = no score yet, ranked as 0. */
   labyrinthScore?: number;
+  /** Opted in to the state event. Only these players are candidates for state alliance
+   *  selection; omitted = not opted in. */
+  wantsStateEvent?: boolean;
   legionByAlliance?: { [allianceId: string]: 1 | 2 | 'unassigned' };  // For cross-alliance events
   tierByAlliance?: { [allianceId: string]: PlayerTier };              // For cross-alliance events
   createdAt?: number;
