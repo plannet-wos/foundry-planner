@@ -8,10 +8,12 @@
     </mat-card-header>
     <mat-card-content>
       <div class="map-controls">
-        <mat-button-toggle-group [value]="globalLegion" (change)="setGlobalLegion($event.value)">
-          <mat-button-toggle [value]="1">Legion 1</mat-button-toggle>
-          <mat-button-toggle [value]="2">Legion 2</mat-button-toggle>
-        </mat-button-toggle-group>
+        @if (!isStateEvent) {
+          <mat-button-toggle-group [value]="globalLegion" (change)="setGlobalLegion($event.value)">
+            <mat-button-toggle [value]="1">Legion 1</mat-button-toggle>
+            <mat-button-toggle [value]="2">Legion 2</mat-button-toggle>
+          </mat-button-toggle-group>
+        }
         <mat-button-toggle-group [value]="globalPhase" (change)="setGlobalPhase($event.value)">
           <mat-button-toggle [value]="1">Phase 1</mat-button-toggle>
           <mat-button-toggle [value]="2">Phase 2</mat-button-toggle>
@@ -47,7 +49,7 @@
 
       <ng-container *ngIf="selectedLocationAssignments$ | async as sel">
         <div class="location-detail">
-          <h3 class="location-detail__title">{{ sel.locationName }} — Legion {{ globalLegion }}</h3>
+          <h3 class="location-detail__title">{{ sel.locationName }}@if (!isStateEvent) { — Legion {{ globalLegion }}}</h3>
           <div class="phase-columns">
             <div *ngFor="let ph of sel.phases" class="phase-column">
               <h3 class="phase-heading">Phase {{ ph.phase }}</h3>
