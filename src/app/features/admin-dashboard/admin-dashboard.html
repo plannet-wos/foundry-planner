@@ -1,13 +1,16 @@
 <div class="admin-container">
   <div class="header-actions">
     <h2>{{ alliance?.name || 'Roster Management' }}</h2>
+    @if (!canEdit) {
+      <p class="view-only-note"><mat-icon>visibility</mat-icon> View only. Only State Admins can change this roster.</p>
+    }
 
     <div class="battle-times">
       <div class="battle-time-block">
         <span class="battle-time-label">Legion 1 — Final Battle Time</span>
         <div class="battle-time-row">
           <mat-form-field appearance="outline">
-            <mat-select [(ngModel)]="finalTimeL1" (ngModelChange)="onTimeChange()">
+            <mat-select [(ngModel)]="finalTimeL1" [disabled]="!canEdit" (ngModelChange)="onTimeChange()">
               <mat-option value="02:00">02:00 UTC</mat-option>
               <mat-option value="07:00">07:00 UTC</mat-option>
               <mat-option value="12:00">12:00 UTC</mat-option>
@@ -22,7 +25,7 @@
         <span class="battle-time-label">Legion 2 — Final Battle Time</span>
         <div class="battle-time-row">
           <mat-form-field appearance="outline">
-            <mat-select [(ngModel)]="finalTimeL2" (ngModelChange)="onTimeChange()">
+            <mat-select [(ngModel)]="finalTimeL2" [disabled]="!canEdit" (ngModelChange)="onTimeChange()">
               <mat-option value="02:00">02:00 UTC</mat-option>
               <mat-option value="07:00">07:00 UTC</mat-option>
               <mat-option value="12:00">12:00 UTC</mat-option>
@@ -38,9 +41,11 @@
         Both legions can't fight at the same time.
       </div>
 
-      <button mat-raised-button color="primary" (click)="saveFinalTimes()" [disabled]="timeConflict">
-        Save Times
-      </button>
+      @if (canEdit) {
+        <button mat-raised-button color="primary" (click)="saveFinalTimes()" [disabled]="timeConflict">
+          Save Times
+        </button>
+      }
     </div>
   </div>
 
@@ -122,6 +127,7 @@
           <td mat-cell *matCellDef="let player">
             <mat-button-toggle-group
               [value]="getPlayerTier(player) || 'none'"
+              [disabled]="!canEdit"
               (change)="setTier(player.id, $event.value)">
               <mat-button-toggle value="whale" title="Whale — picks first">🐋</mat-button-toggle>
               <mat-button-toggle value="dolphin" title="Dolphin — picks after whales">🐬</mat-button-toggle>
@@ -136,6 +142,7 @@
           <td mat-cell *matCellDef="let player">
             <mat-button-toggle-group
               [value]="getPlayerLegion(player)"
+              [disabled]="!canEdit"
               (change)="setLegion(player.id, getPlayerLegion(player), $event.value)">
               <mat-button-toggle value="1">L1</mat-button-toggle>
               <mat-button-toggle value="2">L2</mat-button-toggle>

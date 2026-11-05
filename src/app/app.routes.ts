@@ -30,7 +30,8 @@ export const routes: Routes = [
   // Firestore document ID at each call site.
   { path: ':stateId/player',                                    component: AllianceSelect },
 
-  { path: ':stateId/admin/:allianceSlug',              component: AdminDashboard,    canActivate: [allianceAdminGuard] },
+  // On a state alliance, any R4/R5 of the state may view the roster (read-only, see allianceAdminGuard).
+  { path: ':stateId/admin/:allianceSlug',              component: AdminDashboard,    canActivate: [allianceAdminGuard], data: { stateEventViewers: true } },
   { path: ':stateId/admin/:allianceSlug/task-library', component: TaskLibrary,       canActivate: [allianceAdminGuard] },
   { path: ':stateId/admin/:allianceSlug/plan-builder', component: BattlePlanBuilder, canActivate: [allianceAdminGuard] },
 

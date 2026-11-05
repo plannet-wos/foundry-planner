@@ -20,6 +20,7 @@ import { Alliance, allianceId } from '../../core/models/alliance.model';
 import { BehaviorSubject, combineLatest, Observable, from } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { FormsModule } from '@angular/forms';
+import { RANK } from '../../core/constants/roles';
 import { EditPlayerDialog, EditPlayerDialogResult } from './edit-player-dialog';
 
 @Component({
@@ -57,6 +58,8 @@ export class AdminDashboard implements OnInit {
   finalTimeL2     = '';
   timeConflict    = false;
   pendingDeleteId: string | null = null;
+  /** False for an R4/R5 viewing a state alliance: only State Admins and up change its roster. */
+  canEdit         = true;
 
   async ngOnInit() {
     this.allianceId = allianceId(
@@ -64,6 +67,9 @@ export class AdminDashboard implements OnInit {
       this.route.snapshot.paramMap.get('allianceSlug')!,
     );
     this.alliance   = await this.allianceService.getAlliance(this.allianceId);
+    const rank = this.auth.rank();
+    this.canEdit = this.alliance?.type !== 'state_event' || (rank !== null && rank <= RANK.STATE_ADMIN);
+    if (!this.canEdit) this.displayedColumns = this.displayedColumns.filter(c => c !== 'actions');
 
     // Load players based on alliance type
     if (this.alliance?.type === 'state_event') {
