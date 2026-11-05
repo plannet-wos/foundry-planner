@@ -2,10 +2,12 @@
   <div class="builder-header">
     <div>
       <h2>{{ alliance?.name || 'Plan Builder' }}</h2>
-      <mat-button-toggle-group [value]="currentLegion$ | async" (change)="setLegion($event.value)" class="legion-toggle">
-        <mat-button-toggle [value]="1">Legion 1</mat-button-toggle>
-        <mat-button-toggle [value]="2">Legion 2</mat-button-toggle>
-      </mat-button-toggle-group>
+      @if (alliance?.type !== 'state_event') {
+        <mat-button-toggle-group [value]="currentLegion$ | async" (change)="setLegion($event.value)" class="legion-toggle">
+          <mat-button-toggle [value]="1">Legion 1</mat-button-toggle>
+          <mat-button-toggle [value]="2">Legion 2</mat-button-toggle>
+        </mat-button-toggle-group>
+      }
     </div>
     <div class="builder-header__actions">
       <button mat-stroked-button (click)="openAutoPlan()">

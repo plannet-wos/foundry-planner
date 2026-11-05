@@ -7,7 +7,7 @@
 
     <div class="battle-times">
       <div class="battle-time-block">
-        <span class="battle-time-label">Legion 1 — Final Battle Time</span>
+        <span class="battle-time-label">{{ alliance?.type === 'state_event' ? 'Final Battle Time' : 'Legion 1 — Final Battle Time' }}</span>
         <div class="battle-time-row">
           <mat-form-field appearance="outline">
             <mat-select [(ngModel)]="finalTimeL1" [disabled]="!canEdit" (ngModelChange)="onTimeChange()">
@@ -21,20 +21,23 @@
         </div>
       </div>
 
-      <div class="battle-time-block">
-        <span class="battle-time-label">Legion 2 — Final Battle Time</span>
-        <div class="battle-time-row">
-          <mat-form-field appearance="outline">
-            <mat-select [(ngModel)]="finalTimeL2" [disabled]="!canEdit" (ngModelChange)="onTimeChange()">
-              <mat-option value="02:00">02:00 UTC</mat-option>
-              <mat-option value="07:00">07:00 UTC</mat-option>
-              <mat-option value="12:00">12:00 UTC</mat-option>
-              <mat-option value="14:00">14:00 UTC</mat-option>
-              <mat-option value="19:00">19:00 UTC</mat-option>
-            </mat-select>
-          </mat-form-field>
+      @if (alliance?.type !== 'state_event') {
+        <div class="battle-time-block">
+          <span class="battle-time-label">Legion 2 — Final Battle Time</span>
+          <div class="battle-time-row">
+            <mat-form-field appearance="outline">
+              <mat-select [(ngModel)]="finalTimeL2" [disabled]="!canEdit" (ngModelChange)="onTimeChange()">
+                <mat-option value="02:00">02:00 UTC</mat-option>
+                <mat-option value="07:00">07:00 UTC</mat-option>
+                <mat-option value="12:00">12:00 UTC</mat-option>
+                <mat-option value="14:00">14:00 UTC</mat-option>
+                <mat-option value="19:00">19:00 UTC</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
         </div>
-      </div>
+
+      }
 
       <div *ngIf="timeConflict" class="time-conflict">
         <mat-icon>warning</mat-icon>
@@ -51,6 +54,7 @@
 
   <mat-card>
     <mat-card-content>
+      @if (alliance?.type !== 'state_event') {
       <div class="roster-controls">
         <span class="sort-label">Sort by</span>
         <mat-button-toggle-group [value]="sortKey.getValue()" (change)="sortKey.next($event.value)">
@@ -58,6 +62,7 @@
           <mat-button-toggle value="legion">Legion</mat-button-toggle>
         </mat-button-toggle-group>
       </div>
+      }
       <div class="table-scroll">
       <table mat-table [dataSource]="(sortedPlayers$ | async) || []" class="mat-elevation-z8 roster-table">
 

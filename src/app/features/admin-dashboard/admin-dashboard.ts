@@ -70,6 +70,8 @@ export class AdminDashboard implements OnInit {
     const rank = this.auth.rank();
     this.canEdit = this.alliance?.type !== 'state_event' || (rank !== null && rank <= RANK.STATE_ADMIN);
     if (!this.canEdit) this.displayedColumns = this.displayedColumns.filter(c => c !== 'actions');
+    // State alliances always play with a single legion, so there's nothing to assign.
+    if (this.alliance?.type === 'state_event') this.displayedColumns = this.displayedColumns.filter(c => c !== 'legion');
 
     // Load players based on alliance type
     if (this.alliance?.type === 'state_event') {
@@ -114,15 +116,15 @@ export class AdminDashboard implements OnInit {
   }
 
   private checkConflict(): boolean {
+    if (this.alliance?.type === 'state_event') return false;
     return !!(this.finalTimeL1 && this.finalTimeL2 && this.finalTimeL1 === this.finalTimeL2);
   }
 
   async saveFinalTimes() {
     try {
-      await this.allianceService.updateAlliance(this.allianceId, {
-        finalTimeL1: this.finalTimeL1,
-        finalTimeL2: this.finalTimeL2
-      });
+      await this.allianceService.updateAlliance(this.allianceId, this.alliance?.type === 'state_event'
+        ? { finalTimeL1: this.finalTimeL1 }
+        : { finalTimeL1: this.finalTimeL1, finalTimeL2: this.finalTimeL2 });
       this.snackBar.open('Battle times saved', 'Close', { duration: 2000 });
     } catch (e) {
       this.snackBar.open('Failed to save battle times', 'Close', { duration: 3000 });

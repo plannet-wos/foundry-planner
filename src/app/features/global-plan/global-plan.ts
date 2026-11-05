@@ -37,6 +37,8 @@ export class GlobalPlan implements OnInit {
 
   globalPhase:  1 | 2 = 1;
   globalLegion: 1 | 2 = 1;
+  /** State alliances always play with one legion, so the legion toggle is hidden. */
+  isStateEvent = false;
 
   private globalPhase$  = new BehaviorSubject<1 | 2>(1);
   private globalLegion$ = new BehaviorSubject<1 | 2>(1);
@@ -63,6 +65,7 @@ export class GlobalPlan implements OnInit {
     this.tasks$       = this.planService.getTasksByAlliance(allianceId);
 
     const alliance = await this.allianceService.getAlliance(allianceId);
+    this.isStateEvent = alliance?.type === 'state_event';
     // A state-event shell has no signups of its own — its roster is every real
     // alliance's players in the same state. See admin-dashboard.ts for the same split.
     this.players$ = alliance?.type === 'state_event'

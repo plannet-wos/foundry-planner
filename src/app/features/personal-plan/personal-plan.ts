@@ -87,9 +87,8 @@ export class PersonalPlan implements OnInit {
         if (!id || !this.alliance) return null;
         const player = players.find(p => p.id === id);
         if (!player) return null;
-        const legion = this.alliance.type === 'state_event'
-          ? player.legionByAlliance?.[allianceId]
-          : player.legion;
+        // State alliances always play with one legion: everyone on the roster is Legion 1.
+        const legion = this.alliance.type === 'state_event' ? 1 : player.legion;
         if (!legion || legion === 'unassigned') return null;
         const legionNum = Number(legion);
         if (legionNum !== 1 && legionNum !== 2) return null;

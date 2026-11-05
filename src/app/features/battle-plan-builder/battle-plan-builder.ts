@@ -134,10 +134,9 @@ export class BattlePlanBuilder implements OnInit {
         // Get the correct legion value for each player based on alliance type
         return players
           .filter(p => {
-            const playerLegion = this.alliance?.type === 'state_event'
-              ? p.legionByAlliance?.[this.allianceId]
-              : p.legion;
-            return Number(playerLegion) === legion;
+            // State alliances always play with one legion: the whole roster is Legion 1.
+            if (this.alliance?.type === 'state_event') return true;
+            return Number(p.legion) === legion;
           })
           .sort((a, b) => a.inGameName.localeCompare(b.inGameName));
       })
