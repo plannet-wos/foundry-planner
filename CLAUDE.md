@@ -63,7 +63,7 @@ docs/
 ### `alliances` collection (state alliances only)
 - `type: 'state_event'` marks a state alliance; its roster is every real alliance's players in the state
 - `battleTimes?`: the 3 `TimeKey`s (`time_12`, …) it plays, set by a State Admin
-- `selection?`: `{ playerIds, pinnedIds, updatedAt, updatedBy }` — the 60 picked on `/:stateId/state/:slug/selection` (see `core/utils/state-selection.ts`). When set, it narrows the state alliance's roster everywhere to those players.
+- `selection?`: `{ playerIds, pinnedIds, updatedAt, updatedBy }` — the 50 picked on (cap was 60 until 2026-11; older rosters may still hold more until trimmed) `/:stateId/state/:slug/selection` (see `core/utils/state-selection.ts`). When set, it narrows the state alliance's roster everywhere to those players.
 
 ### `tasks` collection
 - **Document ID:** generated string (e.g. `task_1712165039201`)

@@ -1,6 +1,6 @@
 import { Player, TimeKey } from '../models/player.model';
 
-export const ROSTER_SIZE = 60;
+export const ROSTER_SIZE = 50;
 export const PLAYERS_PER_TIME = 30;
 
 export interface SelectionResult {

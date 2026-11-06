@@ -24,7 +24,7 @@ import {
 const BATTLE_TIME_COUNT = 3;
 
 /**
- * State Admin page for one state alliance: pick its 3 battle times, compute the 60-player
+ * State Admin page for one state alliance: pick its 3 battle times, compute the 50-player
  * roster (see core/utils/state-selection.ts), adjust it by hand, and save it on the alliance
  * doc. The candidate pool is every player of every real alliance in the state who wants to
  * play the state event (`wantsStateEvent`), minus anyone
@@ -102,6 +102,8 @@ export class StateSelectionPage implements OnInit {
   readonly missingScores = computed(() =>
     [...this.selected(), ...this.pool()].filter((p) => p.labyrinthScore == null).length);
   readonly full = computed(() => this.selected().length >= ROSTER_SIZE);
+  /** A roster saved under the old 60-player cap: kept as is until the State Admin trims it. */
+  readonly overCap = computed(() => Math.max(0, this.selected().length - ROSTER_SIZE));
 
   async ngOnInit() {
     const stateId = this.route.snapshot.paramMap.get('stateId')!;

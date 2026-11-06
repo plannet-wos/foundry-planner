@@ -1,7 +1,7 @@
 import { TimeKey } from './player.model';
 
 /**
- * A state alliance's saved 60-player roster, picked by a State Admin on the selection page
+ * A state alliance's saved 50-player roster, picked by a State Admin on the selection page
  * (see features/state-selection and core/utils/state-selection.ts). Lives on the alliance
  * doc rather than on player docs because `players` is open to anyone, while alliance-doc
  * writes are already limited to State Admins of that state by firestore.rules.
