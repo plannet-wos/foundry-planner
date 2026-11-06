@@ -25,38 +25,36 @@ function many(n: number, score: (i: number) => number, times: TimeKey[]): Player
 }
 
 describe('computeSelection', () => {
-  it('takes the top 60 by labyrinth score when coverage is already fine', () => {
+  it('takes the top 50 by labyrinth score when coverage is already fine', () => {
     const pool = many(80, (i) => 1000 - i, TIMES);
     const r = computeSelection(pool, TIMES);
-    expect(r.playerIds).toEqual(pool.slice(0, 60).map((p) => p.id));
-    expect(r.coverage).toEqual({ time_12: 60, time_14: 60, time_19: 60 });
+    expect(r.playerIds).toEqual(pool.slice(0, 50).map((p) => p.id));
+    expect(r.coverage).toEqual({ time_12: 50, time_14: 50, time_19: 50 });
     expect(r.shortfalls).toEqual([]);
   });
 
   it('swaps in lower-scored players to reach 30 at a short time', () => {
     const strong = many(60, (i) => 1000 - i, ['time_12', 'time_14']); // nobody at 19
-    const at19 = many(40, (i) => 100 - i, ['time_19']);
-    const r = computeSelection([...strong, ...at19], TIMES);
+    const flexible = many(40, (i) => 100 - i, TIMES);
+    const r = computeSelection([...strong, ...flexible], TIMES);
 
-    expect(r.playerIds.length).toBe(60);
-    expect(r.coverage['time_19']).toBe(30);
-    expect(r.coverage['time_12']).toBe(30);
+    expect(r.playerIds.length).toBe(50);
+    expect(r.coverage).toEqual({ time_12: 50, time_14: 50, time_19: 30 });
     expect(r.shortfalls).toEqual([]);
-    // The best 30 of the strong group stay; the best 30 of the 19:00 group come in.
-    expect(r.playerIds).toEqual(expect.arrayContaining(strong.slice(0, 30).map((p) => p.id)));
-    expect(r.playerIds).toEqual(expect.arrayContaining(at19.slice(0, 30).map((p) => p.id)));
+    // The best 20 of the strong group stay; the best 30 of the flexible group come in.
+    expect(r.playerIds).toEqual(expect.arrayContaining(strong.slice(0, 20).map((p) => p.id)));
+    expect(r.playerIds).toEqual(expect.arrayContaining(flexible.slice(0, 30).map((p) => p.id)));
   });
 
   it('prefers swapping out a player whose removal keeps other times covered', () => {
     const only12 = many(30, (i) => 900 - i, ['time_12']);
-    const only14 = many(30, (i) => 800 - i, ['time_14']);
+    const only14 = many(20, (i) => 800 - i, ['time_14']);
     const at19 = many(5, (i) => 10 - i, ['time_19', 'time_12', 'time_14']);
     const r = computeSelection([...only12, ...only14, ...at19], TIMES);
-    // 19:00 can only ever reach 5, but 12:00 and 14:00 must not drop below 30.
-    expect(r.coverage['time_12']).toBeGreaterThanOrEqual(30);
-    expect(r.coverage['time_14']).toBeGreaterThanOrEqual(30);
-    expect(r.coverage['time_19']).toBe(5);
-    expect(r.shortfalls).toEqual([{ time: 'time_19', missing: 25 }]);
+    // 12:00 must not drop below 30 while 14:00 and 19:00 get what they can.
+    expect(r.coverage).toEqual({ time_12: 30, time_14: 25, time_19: 5 });
+    expect(r.shortfalls).toEqual([{ time: 'time_14', missing: 5 }, { time: 'time_19', missing: 25 }]);
+    expect(r.playerIds.length).toBe(50);
   });
 
   it('reports a shortfall when the pool cannot cover a time', () => {
@@ -64,7 +62,7 @@ describe('computeSelection', () => {
     const r = computeSelection(pool, TIMES);
     expect(r.coverage['time_19']).toBe(12);
     expect(r.shortfalls).toEqual([{ time: 'time_19', missing: 18 }]);
-    expect(r.playerIds.length).toBe(60);
+    expect(r.playerIds.length).toBe(50);
   });
 
   it('always keeps pinned players, even low-scored ones', () => {
@@ -72,16 +70,22 @@ describe('computeSelection', () => {
     const low = pool[79];
     const r = computeSelection(pool, TIMES, [low.id]);
     expect(r.playerIds).toContain(low.id);
-    expect(r.playerIds.length).toBe(60);
-    expect(r.playerIds).not.toContain(pool[59].id);
+    expect(r.playerIds.length).toBe(50);
+    expect(r.playerIds).not.toContain(pool[49].id);
   });
 
   it('never swaps out a pinned player to fix coverage', () => {
-    const pinnedPlayers = many(60, (i) => 1000 - i, ['time_12', 'time_14']);
+    const pinnedPlayers = many(50, (i) => 1000 - i, ['time_12', 'time_14']);
     const at19 = many(30, () => 1, ['time_19']);
     const r = computeSelection([...pinnedPlayers, ...at19], TIMES, pinnedPlayers.map((p) => p.id));
     expect(r.playerIds.sort()).toEqual(pinnedPlayers.map((p) => p.id).sort());
     expect(r.shortfalls).toEqual([{ time: 'time_19', missing: 30 }]);
+  });
+
+  it('keeps every pinned player even when there are more than the roster size', () => {
+    const pinnedPlayers = many(60, (i) => 1000 - i, TIMES);
+    const r = computeSelection([...pinnedPlayers, ...many(5, () => 1, TIMES)], TIMES, pinnedPlayers.map((p) => p.id));
+    expect(r.playerIds.sort()).toEqual(pinnedPlayers.map((p) => p.id).sort());
   });
 
   it('ignores players not available at any battle time', () => {

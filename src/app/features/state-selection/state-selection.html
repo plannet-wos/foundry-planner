@@ -34,7 +34,7 @@
     <mat-card class="summary-card">
       <mat-card-content>
         <div class="counters">
-          <div class="counter" [class.short]="selected().length < ROSTER_SIZE">
+          <div class="counter" [class.short]="selected().length < ROSTER_SIZE" [class.over]="overCap() > 0">
             <span class="counter__value">{{ selected().length }}/{{ ROSTER_SIZE }}</span>
             <span class="counter__label">Selected</span>
           </div>
@@ -59,6 +59,12 @@
 
         @if (!timesReady()) {
           <p class="warning"><mat-icon>info</mat-icon> Pick {{ BATTLE_TIME_COUNT }} battle times to compute a selection.</p>
+        }
+        @if (overCap() > 0) {
+          <p class="warning">
+            <mat-icon>error</mat-icon>
+            {{ overCap() }} player(s) over the limit of {{ ROSTER_SIZE }}. Remove {{ overCap() }} and save.
+          </p>
         }
         @if (timesReady() && selected().length > 0) {
           @for (s of shortfalls(); track s.time) {
