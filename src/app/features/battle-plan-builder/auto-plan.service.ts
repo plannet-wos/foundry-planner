@@ -314,8 +314,11 @@ export class AutoPlanService {
     // Merge duplicate rows for the same player (counts add up).
     const want = new Map<string, number>();
     const rowIndex = new Map<string, number>();
+    // "Player at location" (e.g. Gatherer): the player physically sits there,
+    // so one location per phase, whatever the count.
+    const cap = task.playerAtLocation ? 1 : Number.MAX_SAFE_INTEGER;
     taskRows.forEach((r, i) => {
-      want.set(r.playerId, (want.get(r.playerId) ?? 0) + r.count);
+      want.set(r.playerId, Math.min(cap, (want.get(r.playerId) ?? 0) + r.count));
       if (!rowIndex.has(r.playerId)) rowIndex.set(r.playerId, i);
     });
     const players = Array.from(want.keys());

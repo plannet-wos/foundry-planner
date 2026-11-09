@@ -183,5 +183,10 @@ describe('AutoPlanService spreading and locality', () => {
     expect(p1.filter(a => a.playerId === 'c2').map(a => [a.taskId, a.locationId])).toEqual([['join', 'w1']]);
     expect(new Set(p1.map(a => a.playerId)).size).toBe(5);
   });
+
+  it('gives a "player at location" grouped task one location per player', () => {
+    const { locs } = run([{ taskId: 'join', playerId: 'g', count: 3 }], {}, { ...JOIN, playerAtLocation: true });
+    expect(locs('g')).toEqual(['w1']);
+  });
 });
 
