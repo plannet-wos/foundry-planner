@@ -255,9 +255,9 @@ export class AutoPlanService {
   // ── Grouped tasks (e.g. Garrison Joiner) ───────────────────────────────
   //
   // Strength is irrelevant here; what matters is that each player's spots
-  // are close together and that the work is shared. We fill location by
-  // location in priority order. For each free slot the candidate is chosen
-  // by, in order:
+  // are close together and that the work is shared. We fill level by level
+  // (each location's 1st slot, then each location's 2nd, …), locations in
+  // priority order. For each free slot the candidate is chosen by, in order:
   //   1. eligible at all: has count left, not already at this location for
   //      this task, and within MAX_SPREAD of every location they already
   //      hold this phase (any task) — a joiner can't cover both map ends
@@ -309,32 +309,43 @@ export class AutoPlanService {
       return c ? Math.hypot(loc.x - c.x, loc.y - c.y) : 0;
     };
 
-    for (const loc of allowed) {
-      const loadKey = `${task.id}|${loc.id}`;
-      while ((taskLocLoad.get(loadKey) ?? 0) < limit) {
-        const eligible = players.filter(p =>
-          got.get(p)! < want.get(p)!
-          && !(playerTaskLocs.get(`${p}|${task.id}`)?.has(loc.id))
-          && isNear(loc, p));
-        if (eligible.length === 0) break;
-        const key = (p: string): number[] => [
-          got.get(p)! >= target ? 1 : 0,
-          spotsOf(p).length > 0 ? 0 : 1,
-          phase === 2 && (phase1Hints.get(`${p}|${task.id}`) ?? []).includes(loc.id) ? 0 : 1,
-          distTo(loc, p),
-          rowIndex.get(p)!,
-        ];
-        let best = eligible[0];
-        let bestKey = key(best);
-        for (const p of eligible.slice(1)) {
-          const k = key(p);
-          const i = k.findIndex((v, j) => v !== bestKey[j]);
-          if (i >= 0 && k[i] < bestKey[i]) { best = p; bestKey = k; }
+    // Level by level: every location gets its 1st player before any gets a
+    // 2nd, and so on up to the task's max — so when there are fewer players
+    // than slots they're spread evenly instead of filling the top buildings
+    // and leaving the rest empty. (No max → a single pass, unlimited.)
+    const levels = limit === Number.MAX_SAFE_INTEGER ? 1 : limit;
+    for (let lv = 1; lv <= levels; lv++) {
+      const level = limit === Number.MAX_SAFE_INTEGER ? limit : lv;
+      let added = false;
+      for (const loc of allowed) {
+        const loadKey = `${task.id}|${loc.id}`;
+        while ((taskLocLoad.get(loadKey) ?? 0) < level) {
+          const eligible = players.filter(p =>
+            got.get(p)! < want.get(p)!
+            && !(playerTaskLocs.get(`${p}|${task.id}`)?.has(loc.id))
+            && isNear(loc, p));
+          if (eligible.length === 0) break;
+          const key = (p: string): number[] => [
+            got.get(p)! >= target ? 1 : 0,
+            spotsOf(p).length > 0 ? 0 : 1,
+            phase === 2 && (phase1Hints.get(`${p}|${task.id}`) ?? []).includes(loc.id) ? 0 : 1,
+            distTo(loc, p),
+            rowIndex.get(p)!,
+          ];
+          let best = eligible[0];
+          let bestKey = key(best);
+          for (const p of eligible.slice(1)) {
+            const k = key(p);
+            const i = k.findIndex((v, j) => v !== bestKey[j]);
+            if (i >= 0 && k[i] < bestKey[i]) { best = p; bestKey = k; }
+          }
+          this.recordPick(out, ctx, task, best, loc, phase,
+                          taskLocLoad, playerLocs, playerTaskLocs);
+          got.set(best, got.get(best)! + 1);
+          added = true;
         }
-        this.recordPick(out, ctx, task, best, loc, phase,
-                        taskLocLoad, playerLocs, playerTaskLocs);
-        got.set(best, got.get(best)! + 1);
       }
+      if (!added) break;
     }
 
     const anyFree = allowed.some(l => (taskLocLoad.get(`${task.id}|${l.id}`) ?? 0) < limit);
