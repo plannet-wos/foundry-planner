@@ -53,8 +53,9 @@ interface AlgoContext {
  *  - phase availability of locations (phase-2-only buildings)
  *  - phase 2 carryover: keep the same (player, task) location from phase 1
  *    unless a strictly higher priority empty slot exists
- *  - `rankByStrength` tasks (captains): whales take all their spots first,
- *    then dolphins (by labyrinth score), then the rest — see fillByStrength
+ *  - `rankByStrength` tasks (captains): strongest player takes all their
+ *    spots first, then the next (whales, dolphins by labyrinth score, rest)
+ *    — see fillByStrength
  *  - other tasks (joiners): grouped fill — each player's spots stay within
  *    MAX_SPREAD of each other and the work is shared — see fillGrouped
  *  - clustering: subsequent locations for a player gravitate toward their
@@ -214,12 +215,12 @@ export class AutoPlanService {
 
   // ── Strength-ranked tasks (e.g. Garrison Captain) ──────────────────────
   //
-  // Tier groups have absolute priority: whales take all their spots first,
-  // then dolphins, then everyone else. Within a tier, higher labyrinth score
-  // picks first (row order breaks ties, unscored last) and players take turns
-  // round by round. Each pick is the best location by priority + distance
-  // (see pickLocation). No locality limit: a captain can lead garrisons
-  // anywhere.
+  // Strongest first, one player at a time: whales, then dolphins, then
+  // everyone else; within whales and dolphins higher labyrinth score first
+  // (row order breaks ties, unscored last). Each player takes ALL their spots
+  // (count) before the next player gets any, so the strongest whale holds the
+  // top-priority buildings. Each pick is the best location by priority +
+  // distance (see pickLocation). No locality limit.
   private fillByStrength(
     ctx: AlgoContext, task: TaskTemplate, taskRows: AutoPlanRow[],
     allowed: MapLocation[], limit: number, phase: 1 | 2, notPlaced: NotPlaced[],
@@ -227,49 +228,37 @@ export class AutoPlanService {
     playerLocs: Map<string, Set<string>>, playerTaskLocs: Map<string, Set<string>>,
     phase1Hints: Map<string, string[]>, playerAnchor: Map<string, Point | null>,
   ) {
-    const tierGroups = new Map<number, AutoPlanRow[]>();
-    for (const r of taskRows) {
-      const rank = ctx.tierRank(r.playerId);
-      const arr = tierGroups.get(rank) ?? [];
-      arr.push(r);
-      tierGroups.set(rank, arr);
-    }
-    const sortedRanks = Array.from(tierGroups.keys()).sort((a, b) => a - b);
+    const score = (r: AutoPlanRow) => ctx.tierRank(r.playerId) < 2
+      ? (ctx.labyrinthScore(r.playerId) ?? -Infinity) : 0;
+    const ordered = [...taskRows].sort((a, b) => {
+      const t = ctx.tierRank(a.playerId) - ctx.tierRank(b.playerId);
+      if (t !== 0) return t;
+      const sa = score(a), sb = score(b);
+      return sa === sb ? 0 : sb > sa ? 1 : -1;
+    });
 
-    for (const rank of sortedRanks) {
-      const groupRows = tierGroups.get(rank)!;
-      if (rank < 2) {
-        const score = (r: AutoPlanRow) => ctx.labyrinthScore(r.playerId) ?? -Infinity;
-        groupRows.sort((a, b) => {
-          const sa = score(a), sb = score(b);
-          return sa === sb ? 0 : sb > sa ? 1 : -1;
-        });
-      }
-      const maxCount = groupRows.reduce((m, r) => Math.max(m, r.count), 0);
-      for (let round = 0; round < maxCount; round++) {
-        for (const row of groupRows) {
-          if (round >= row.count) continue;
-          const anchor = playerAnchor.get(row.playerId) ?? null;
-          const picked = this.pickLocation(
-            task, row.playerId, allowed, limit,
-            taskLocLoad, playerTaskLocs,
-            phase, phase1Hints, anchor,
-          );
-          if (!picked) {
-            notPlaced.push({
-              taskId: task.id, taskName: task.name,
-              playerId: row.playerId, playerName: ctx.playerName(row.playerId),
-              phase, reason: 'All allowed locations are at capacity',
-            });
-            continue;
-          }
-          this.recordPick(out, ctx, task, row.playerId, picked, phase,
-                          taskLocLoad, playerLocs, playerTaskLocs);
-          // Seed anchor from the very first pick if this player had no
-          // pre-task locations — later picks then cluster around it (frozen).
-          if (anchor === null) {
-            playerAnchor.set(row.playerId, { x: picked.x, y: picked.y });
-          }
+    for (const row of ordered) {
+      for (let i = 0; i < row.count; i++) {
+        const anchor = playerAnchor.get(row.playerId) ?? null;
+        const picked = this.pickLocation(
+          task, row.playerId, allowed, limit,
+          taskLocLoad, playerTaskLocs,
+          phase, phase1Hints, anchor,
+        );
+        if (!picked) {
+          notPlaced.push({
+            taskId: task.id, taskName: task.name,
+            playerId: row.playerId, playerName: ctx.playerName(row.playerId),
+            phase, reason: 'All allowed locations are at capacity',
+          });
+          continue;
+        }
+        this.recordPick(out, ctx, task, row.playerId, picked, phase,
+                        taskLocLoad, playerLocs, playerTaskLocs);
+        // Seed anchor from the very first pick if this player had no
+        // pre-task locations — later picks then cluster around it (frozen).
+        if (anchor === null) {
+          playerAnchor.set(row.playerId, { x: picked.x, y: picked.y });
         }
       }
     }
