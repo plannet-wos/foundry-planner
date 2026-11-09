@@ -140,6 +140,17 @@ describe('AutoPlanService spreading and locality', () => {
     expect(locs('dolphin')).toEqual([]);
   });
 
+  it('on strength-ranked tasks, takes the top building, then the closest ones', () => {
+    const { locs } = run(
+      [{ taskId: 'join', playerId: 'whale', count: 2 }, { taskId: 'join', playerId: 'dolphin', count: 1 }],
+      { whale: 'whale', dolphin: 'dolphin' },
+      { ...JOIN, rankByStrength: true },
+    );
+    // w1 is top priority; w2 is next to it, e1 (2nd priority) is across the map.
+    expect(locs('whale')).toEqual(['w1', 'w2']);
+    expect(locs('dolphin')).toEqual(['e1']);
+  });
+
   it('on grouped tasks, shares the work before anyone gets an extra spot', () => {
     const { locs } = run(
       [{ taskId: 'join', playerId: 'a', count: 3 }, { taskId: 'join', playerId: 'b', count: 3 },

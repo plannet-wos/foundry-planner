@@ -204,9 +204,9 @@ export class AutoPlanService {
   // everyone else; within whales and dolphins higher labyrinth score first
   // (row order breaks ties, unscored last). Each player takes ALL their spots
   // (count) before the next player gets any, so the strongest whale holds the
-  // top-priority buildings. Picks go strictly by the task's building
-  // priority: no distance or phase-1 carryover adjustment, and no locality
-  // limit, so the strongest always holds the most important buildings.
+  // top-priority buildings: their 1st spot is the most important free
+  // building, every further spot the free building closest to the spots they
+  // already hold in this task (priority breaks ties). No locality limit.
   private fillByStrength(
     ctx: AlgoContext, task: TaskTemplate, taskRows: AutoPlanRow[],
     allowed: MapLocation[], limit: number, phase: 1 | 2, notPlaced: NotPlaced[],
@@ -224,10 +224,20 @@ export class AutoPlanService {
 
     for (const row of ordered) {
       for (let i = 0; i < row.count; i++) {
-        // Highest-priority location with room that this player isn't at yet.
         const mine = playerTaskLocs.get(`${row.playerId}|${task.id}`);
-        const picked = allowed.find(l =>
+        const free = allowed.filter(l =>
           !mine?.has(l.id) && (taskLocLoad.get(`${task.id}|${l.id}`) ?? 0) < limit);
+        // 1st spot: highest priority. Later spots: closest to the player's
+        // spots in this task (free is in priority order, so ties keep it).
+        const c = mine?.size ? this.centroidOf(mine, ctx.locations) : null;
+        let picked = free[0];
+        if (c) {
+          let best = Infinity;
+          for (const l of free) {
+            const d = Math.hypot(l.x - c.x, l.y - c.y);
+            if (d < best) { best = d; picked = l; }
+          }
+        }
         if (!picked) {
           notPlaced.push({
             taskId: task.id, taskName: task.name,
