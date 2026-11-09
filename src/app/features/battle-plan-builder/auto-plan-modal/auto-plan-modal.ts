@@ -18,7 +18,8 @@ export interface AutoPlanModalData {
   allianceId: string;
   legion: 1 | 2;
   tasks: TaskTemplate[];        // includes teleport task if enabled
-  players: Player[];            // already filtered to this legion
+  players: Player[];            // already filtered to this legion; `tier` is the
+                                // effective tier for this alliance
 }
 
 interface RowVM extends AutoPlanRow {
@@ -212,6 +213,7 @@ export class AutoPlanModal implements OnInit {
       }
       const playerNameById = new Map(this.data.players.map(p => [p.id, p.inGameName]));
       const playerTierById = new Map(this.data.players.map(p => [p.id, p.tier]));
+      const playerScoreById = new Map(this.data.players.map(p => [p.id, p.labyrinthScore]));
       const result = this.autoPlan.generate({
         allianceId: this.data.allianceId,
         legion: this.data.legion,
@@ -219,6 +221,7 @@ export class AutoPlanModal implements OnInit {
         tasks: this.data.tasks,
         playerName: id => playerNameById.get(id) ?? id,
         playerTier: id => playerTierById.get(id),
+        labyrinthScore: id => playerScoreById.get(id),
       });
       this.result = result;
       this.preview = this.buildPreview(result.proposed);

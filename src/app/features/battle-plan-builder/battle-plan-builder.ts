@@ -317,8 +317,14 @@ export class BattlePlanBuilder implements OnInit {
 
   async openAutoPlan() {
     const legion  = this.currentLegion$.getValue();
-    const players = await firstValueFrom(this.filteredPlayers$);
     const tasks   = await firstValueFrom(this.tasks$);
+    // On a state alliance the tier that counts is the one set for that
+    // alliance (tierByAlliance), not the player's home-alliance tier.
+    const players = (await firstValueFrom(this.filteredPlayers$)).map(p =>
+      this.alliance?.type === 'state_event'
+        ? { ...p, tier: p.tierByAlliance?.[this.allianceId] }
+        : p
+    );
 
     const ref = this.dialog.open<AutoPlanModal, AutoPlanModalData, AutoPlanResult | null>(
       AutoPlanModal,
