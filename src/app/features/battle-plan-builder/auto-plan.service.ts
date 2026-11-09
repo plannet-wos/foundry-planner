@@ -54,6 +54,8 @@ interface AlgoContext {
  *  - `rankByStrength` tasks (captains): strongest player takes all their
  *    spots on the top-priority buildings first, then the next (whales,
  *    dolphins by labyrinth score, rest) — see fillByStrength
+ *  - everyone in the inputs gets at least one spot per phase (extra joiner
+ *    if their own task can't place them) — see the end of runPhase
  *  - other tasks (joiners): grouped fill — each player's spots stay within
  *    MAX_SPREAD of each other, the work is shared, and phase 1 locations are
  *    preferred again in phase 2 — see fillGrouped
@@ -192,6 +194,37 @@ export class AutoPlanService {
       } else {
         this.fillGrouped(ctx, task, taskRows, allowed, limit, phase, notPlaced,
           out, taskLocLoad, playerLocs, playerTaskLocs, phase1Hints, locById);
+      }
+    }
+
+    // Nobody in the inputs sits a phase out: only ~30 of the roster can be in
+    // the battle at once and some won't show, so over-assigning is fine. A
+    // player left without any spot this phase (their task is full, or has no
+    // building this phase) joins the grouped task with the most buildings this
+    // phase (e.g. Garrison Joiner) at its least-full building — past the
+    // task's max if needed.
+    const fallback = ctx.tasks
+      .filter(t => !t.rankByStrength)
+      .map(t => ({ t, locs: (t.priorityLocationIds ?? [])
+        .map(id => locById.get(id))
+        .filter((l): l is MapLocation => !!l && l.phases.includes(phase) && l.type !== 'global') }))
+      .filter(x => x.locs.length > 0)
+      .sort((a, b) => b.locs.length - a.locs.length)[0];
+    if (fallback) {
+      const max = fallback.t.maxPlayersPerLocation ?? Number.MAX_SAFE_INTEGER;
+      const seen = new Set<string>();
+      for (const r of rows) {
+        if (seen.has(r.playerId) || r.count < 1) continue;
+        seen.add(r.playerId);
+        if (playerLocs.get(r.playerId)?.size) continue;
+        let best = fallback.locs[0];
+        let bestFill = Infinity;
+        for (const l of fallback.locs) {
+          const fill = (taskLocLoad.get(`${fallback.t.id}|${l.id}`) ?? 0) / max;
+          if (fill < bestFill) { bestFill = fill; best = l; }
+        }
+        this.recordPick(out, ctx, fallback.t, r.playerId, best, phase,
+                        taskLocLoad, playerLocs, playerTaskLocs);
       }
     }
 
