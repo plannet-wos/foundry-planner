@@ -68,6 +68,18 @@ describe('AutoPlanService labyrinth score ordering', () => {
     expect(picks).toEqual({ scored: 'loc1', tieA: 'loc2', tieB: 'loc3', unscored: 'loc4' });
   });
 
+  it('lets the strongest whale take all their spots before the next whale', () => {
+    const r = service.generate({
+      allianceId: 'a', legion: 1,
+      rows: [{ taskId: TASK.id, playerId: 'weak', count: 1 }, { taskId: TASK.id, playerId: 'strong', count: 3 }],
+      tasks: [TASK], playerName: id => id,
+      playerTier: () => 'whale', labyrinthScore: id => (id === 'strong' ? 900 : 100),
+    });
+    const p1 = r.proposed.filter(a => a.phase === 1);
+    expect(p1.filter(a => a.playerId === 'strong').map(a => a.locationId)).toEqual(['loc1', 'loc2', 'loc3']);
+    expect(p1.filter(a => a.playerId === 'weak').map(a => a.locationId)).toEqual(['loc4']);
+  });
+
   it('ignores score for players without a tier', () => {
     const picks = phase1Picks(
       ['first', 'second'],
