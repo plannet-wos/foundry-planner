@@ -166,5 +166,22 @@ describe('AutoPlanService spreading and locality', () => {
     expect(locs('p')).toEqual(['w1', 'w2']);
     expect(notPlaced.map(n => n.reason)).toEqual(["No free location near this player's other locations"]);
   });
+
+  it('puts a player left without any spot in as an extra joiner, past the max', () => {
+    const CAP: TaskTemplate = { ...JOIN, id: 'cap', name: 'Captain', order: 0, rankByStrength: true,
+                                priorityLocationIds: ['w1'] };
+    const join: TaskTemplate = { ...JOIN, order: 1 };
+    const r = service.generate({
+      allianceId: 'a', legion: 1, tasks: [CAP, join], playerName: id => id,
+      rows: [{ taskId: 'cap', playerId: 'c1', count: 1 }, { taskId: 'cap', playerId: 'c2', count: 1 },
+             { taskId: 'join', playerId: 'j1', count: 1 }, { taskId: 'join', playerId: 'j2', count: 1 },
+             { taskId: 'join', playerId: 'j3', count: 1 }],
+    });
+    const p1 = r.proposed.filter(a => a.phase === 1);
+    // c2 has no captain building left; all 3 joiner spots are taken, so c2
+    // still joins, at the least-full building.
+    expect(p1.filter(a => a.playerId === 'c2').map(a => [a.taskId, a.locationId])).toEqual([['join', 'w1']]);
+    expect(new Set(p1.map(a => a.playerId)).size).toBe(5);
+  });
 });
 
