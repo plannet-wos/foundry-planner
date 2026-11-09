@@ -29,7 +29,7 @@
           <mat-label>Player</mat-label>
           <mat-select [(ngModel)]="row.playerId" name="player_{{row.uid}}" (ngModelChange)="onRowChanged()">
             <mat-option *ngFor="let p of data.players" [value]="p.id">
-              <span *ngIf="p.tier === 'whale'">🐋 </span><span *ngIf="p.tier === 'dolphin'">🐬 </span>{{ p.inGameName }}
+              <span *ngIf="p.tier === 'whale'">🐋 </span><span *ngIf="p.tier === 'dolphin'">🐬 </span>{{ p.inGameName }}<span *ngIf="p.tier && p.labyrinthScore != null" class="row__score"> · Lab {{ p.labyrinthScore | number }}</span>
             </mat-option>
           </mat-select>
         </mat-form-field>

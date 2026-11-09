@@ -41,6 +41,8 @@ interface AlgoContext {
   playerName: (id: string) => string;
   /** Lower rank = higher priority. whale=0, dolphin=1, none=2. */
   tierRank: (id: string) => number;
+  /** Labyrinth score per player; undefined = no score entered. */
+  labyrinthScore: (id: string) => number | undefined;
 }
 
 /**
@@ -70,6 +72,10 @@ export class AutoPlanService {
     /** Spending tier per player. Whales pick before dolphins before none.
      *  Within a tier, the row order from the modal still applies. */
     playerTier?: (id: string) => 'whale' | 'dolphin' | undefined;
+    /** Labyrinth score per player. Within the whale and dolphin tiers, a
+     *  higher score picks first; row order only breaks ties, and players
+     *  without a score come after everyone who has one. */
+    labyrinthScore?: (id: string) => number | undefined;
   }): AutoPlanResult {
     const tierRank = (id: string) => {
       const t = args.playerTier?.(id);
@@ -92,6 +98,7 @@ export class AutoPlanService {
       locations: this.planService.MAP_LOCATIONS,
       playerName: args.playerName,
       tierRank,
+      labyrinthScore: id => args.labyrinthScore?.(id),
     };
 
     const notPlaced: NotPlaced[] = [];
@@ -204,6 +211,16 @@ export class AutoPlanService {
 
       for (const rank of sortedRanks) {
         const groupRows = tierGroups.get(rank)!;
+        // Whales and dolphins: higher labyrinth score picks first. The sort is
+        // stable, so equal scores (and unscored players, who go last) keep
+        // the modal's row order. Players with no tier keep pure row order.
+        if (rank < 2) {
+          const score = (r: AutoPlanRow) => ctx.labyrinthScore(r.playerId) ?? -Infinity;
+          groupRows.sort((a, b) => {
+            const sa = score(a), sb = score(b);
+            return sa === sb ? 0 : sb > sa ? 1 : -1;
+          });
+        }
         const maxCount = groupRows.reduce((m, r) => Math.max(m, r.count), 0);
         for (let round = 0; round < maxCount; round++) {
           for (const row of groupRows) {
