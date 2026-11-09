@@ -11,6 +11,10 @@ export interface TaskTemplate {
   // playerAtLocation task, their teleport sits at the highest-priority such
   // location they were assigned to. Otherwise it sits at the nearest workshop.
   playerAtLocation?: boolean;
+  // If true, the auto-plan lets the strongest players pick first in this task:
+  // whales, then dolphins, then everyone else; within whales and dolphins by
+  // labyrinth score. Otherwise only the auto-plan row order counts.
+  rankByStrength?: boolean;
   // Ordered list of allowed locationIds for this task. Highest priority first.
   // Locations not in the list are not allowed for this task.
   priorityLocationIds?: string[];
