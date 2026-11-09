@@ -63,6 +63,11 @@
             <span class="hint-inline">— teleport sits at this task's location</span>
           </mat-checkbox>
 
+          <mat-checkbox formControlName="rankByStrength">
+            Strongest players first
+            <span class="hint-inline">— auto-plan: whales, then dolphins, by labyrinth score</span>
+          </mat-checkbox>
+
           <div class="priority-editor">
             <div class="priority-editor__title">Priority Locations</div>
             <div class="priority-editor__hint">
@@ -107,6 +112,7 @@
                 <div class="task-row__meta" *ngIf="task.description">{{ task.description }}</div>
                 <div class="task-row__meta" *ngIf="task.maxPlayersPerLocation">Max {{ task.maxPlayersPerLocation }} per location</div>
                 <div class="task-row__meta" *ngIf="task.playerAtLocation">Player at location</div>
+                <div class="task-row__meta" *ngIf="task.rankByStrength">Strongest players first</div>
                 <div class="task-row__meta" *ngIf="task.priorityLocationIds?.length">
                   {{ task.priorityLocationIds!.length }} allowed location<span *ngIf="task.priorityLocationIds!.length !== 1">s</span>
                 </div>

@@ -68,7 +68,8 @@ export class TaskLibrary implements OnInit {
     name:                  ['', Validators.required],
     description:           [''],
     maxPlayersPerLocation: [null as number | null, Validators.min(1)],
-    playerAtLocation:      [false]
+    playerAtLocation:      [false],
+    rankByStrength:        [false]
   });
 
   ngOnInit() {
@@ -160,7 +161,8 @@ export class TaskLibrary implements OnInit {
       name:                  task.name,
       description:           task.description ?? '',
       maxPlayersPerLocation: task.maxPlayersPerLocation ?? null,
-      playerAtLocation:      task.playerAtLocation ?? false
+      playerAtLocation:      task.playerAtLocation ?? false,
+      rankByStrength:        task.rankByStrength ?? false
     });
     this.priorityLocations = this.buildPriorityFromTask(task);
   }
@@ -168,7 +170,7 @@ export class TaskLibrary implements OnInit {
   cancelEdit() {
     this.editingTask = null;
     this.taskForm.reset({
-      name: '', description: '', maxPlayersPerLocation: null, playerAtLocation: false
+      name: '', description: '', maxPlayersPerLocation: null, playerAtLocation: false, rankByStrength: false
     });
     this.taskForm.markAsPristine();
     this.taskForm.markAsUntouched();
@@ -189,6 +191,7 @@ export class TaskLibrary implements OnInit {
         ...this.editingTask,
         name: val.name!,
         playerAtLocation:    !!val.playerAtLocation,
+        rankByStrength:      !!val.rankByStrength,
         priorityLocationIds,
         ...(val.description           ? { description: val.description }                       : {}),
         ...(val.maxPlayersPerLocation ? { maxPlayersPerLocation: val.maxPlayersPerLocation! } : {})
@@ -205,6 +208,7 @@ export class TaskLibrary implements OnInit {
         name:        val.name!,
         color,
         playerAtLocation:    !!val.playerAtLocation,
+        rankByStrength:      !!val.rankByStrength,
         priorityLocationIds,
         ...(val.description           ? { description: val.description }                       : {}),
         ...(val.maxPlayersPerLocation ? { maxPlayersPerLocation: val.maxPlayersPerLocation! } : {})

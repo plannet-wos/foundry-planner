@@ -11,6 +11,7 @@ const LOCS: MapLocation[] = [1, 2, 3, 4].map(i => ({
 const TASK: TaskTemplate = {
   id: 'rally', allianceId: 'a', name: 'Rally', order: 0,
   maxPlayersPerLocation: 1, priorityLocationIds: LOCS.map(l => l.id),
+  rankByStrength: true,
 };
 
 describe('AutoPlanService labyrinth score ordering', () => {
@@ -27,11 +28,12 @@ describe('AutoPlanService labyrinth score ordering', () => {
     rows: string[],
     tier: Record<string, 'whale' | 'dolphin' | undefined>,
     score: Record<string, number | undefined>,
+    task: TaskTemplate = TASK,
   ): Record<string, string> {
     const r = service.generate({
       allianceId: 'a', legion: 1,
-      rows: rows.map((playerId): AutoPlanRow => ({ taskId: TASK.id, playerId, count: 1 })),
-      tasks: [TASK],
+      rows: rows.map((playerId): AutoPlanRow => ({ taskId: task.id, playerId, count: 1 })),
+      tasks: [task],
       playerName: id => id,
       playerTier: id => tier[id],
       labyrinthScore: id => score[id],
@@ -74,4 +76,72 @@ describe('AutoPlanService labyrinth score ordering', () => {
     );
     expect(picks).toEqual({ first: 'loc1', second: 'loc2' });
   });
+
+  it('uses only row order on tasks without "strongest players first"', () => {
+    const picks = phase1Picks(
+      ['dolphin', 'lowWhale', 'highWhale'],
+      { lowWhale: 'whale', highWhale: 'whale', dolphin: 'dolphin' },
+      { lowWhale: 100, highWhale: 500, dolphin: 900 },
+      { ...TASK, rankByStrength: false },
+    );
+    expect(picks).toEqual({ dolphin: 'loc1', lowWhale: 'loc2', highWhale: 'loc3' });
+  });
 });
+
+describe('AutoPlanService spreading and locality', () => {
+  let service: AutoPlanService;
+  // A west cluster (w1, w2 close together) and a far east building (e1).
+  const MAP: MapLocation[] = [
+    { id: 'w1', name: 'W1', x: 10, y: 50, type: 'outer', phases: [1, 2] },
+    { id: 'e1', name: 'E1', x: 90, y: 50, type: 'outer', phases: [1, 2] },
+    { id: 'w2', name: 'W2', x: 20, y: 50, type: 'outer', phases: [1, 2] },
+  ];
+  const JOIN: TaskTemplate = {
+    id: 'join', allianceId: 'a', name: 'Joiner', order: 0,
+    maxPlayersPerLocation: 1, priorityLocationIds: MAP.map(l => l.id),
+  };
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [{ provide: PlanService, useValue: { MAP_LOCATIONS: MAP } }],
+    });
+    service = TestBed.inject(AutoPlanService);
+  });
+
+  function run(rows: AutoPlanRow[], tier: Record<string, 'whale' | 'dolphin'> = {}, task = JOIN) {
+    const r = service.generate({
+      allianceId: 'a', legion: 1, rows, tasks: [task],
+      playerName: id => id, playerTier: id => tier[id],
+    });
+    const p1 = r.proposed.filter(a => a.phase === 1);
+    const locs = (id: string) => p1.filter(a => a.playerId === id).map(a => a.locationId).sort();
+    return { locs, notPlaced: r.notPlaced.filter(n => n.phase === 1) };
+  }
+
+  it('on strength-ranked tasks, lets whales take all their spots before dolphins', () => {
+    const { locs } = run(
+      [{ taskId: 'join', playerId: 'dolphin', count: 1 }, { taskId: 'join', playerId: 'whale', count: 3 }],
+      { whale: 'whale', dolphin: 'dolphin' },
+      { ...JOIN, rankByStrength: true },
+    );
+    expect(locs('whale')).toEqual(['e1', 'w1', 'w2']);
+    expect(locs('dolphin')).toEqual([]);
+  });
+
+  it('on grouped tasks, shares the work before anyone gets an extra spot', () => {
+    const { locs } = run(
+      [{ taskId: 'join', playerId: 'a', count: 3 }, { taskId: 'join', playerId: 'b', count: 3 },
+       { taskId: 'join', playerId: 'c', count: 1 }],
+      {}, { ...JOIN, maxPlayersPerLocation: 1 },
+    );
+    // 3 slots for 3 players: one each, a and b don't take c's spot.
+    expect([locs('a'), locs('b'), locs('c')].map(l => l.length)).toEqual([1, 1, 1]);
+  });
+
+  it('never gives one player locations at opposite ends of the map', () => {
+    const { locs, notPlaced } = run([{ taskId: 'join', playerId: 'p', count: 3 }]);
+    expect(locs('p')).toEqual(['w1', 'w2']);
+    expect(notPlaced.map(n => n.reason)).toEqual(["No free location near this player's other locations"]);
+  });
+});
+
