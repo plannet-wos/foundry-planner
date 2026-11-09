@@ -51,15 +51,12 @@ interface AlgoContext {
  *  - per-task `priorityLocationIds` (order = priority, missing locs are excluded)
  *  - per-task `maxPlayersPerLocation`
  *  - phase availability of locations (phase-2-only buildings)
- *  - phase 2 carryover: keep the same (player, task) location from phase 1
- *    unless a strictly higher priority empty slot exists
  *  - `rankByStrength` tasks (captains): strongest player takes all their
- *    spots first, then the next (whales, dolphins by labyrinth score, rest)
- *    — see fillByStrength
+ *    spots on the top-priority buildings first, then the next (whales,
+ *    dolphins by labyrinth score, rest) — see fillByStrength
  *  - other tasks (joiners): grouped fill — each player's spots stay within
- *    MAX_SPREAD of each other and the work is shared — see fillGrouped
- *  - clustering: subsequent locations for a player gravitate toward their
- *    existing locations (centroid-nearest)
+ *    MAX_SPREAD of each other, the work is shared, and phase 1 locations are
+ *    preferred again in phase 2 — see fillGrouped
  *  - teleport pseudo-task: highest-priority `playerAtLocation` slot per
  *    player, else nearest workshop to the player's centroid
  */
@@ -189,21 +186,9 @@ export class AutoPlanService {
 
       const limit = task.maxPlayersPerLocation ?? Number.MAX_SAFE_INTEGER;
 
-      // Freeze each player's anchor at task entry. The anchor = centroid of
-      // their locations from previous tasks this phase, OR null if this is
-      // the first task to place them. Frozen so it doesn't drift as we add
-      // locations within this task — drift caused later picks to look
-      // closer to recently-added locs than to the player's "home base".
-      const playerAnchor = new Map<string, Point | null>();
-      for (const row of taskRows) {
-        if (playerAnchor.has(row.playerId)) continue;
-        const locs = playerLocs.get(row.playerId);
-        playerAnchor.set(row.playerId, locs ? this.centroidOf(locs, ctx.locations) : null);
-      }
-
       if (task.rankByStrength) {
         this.fillByStrength(ctx, task, taskRows, allowed, limit, phase, notPlaced,
-          out, taskLocLoad, playerLocs, playerTaskLocs, phase1Hints, playerAnchor);
+          out, taskLocLoad, playerLocs, playerTaskLocs);
       } else {
         this.fillGrouped(ctx, task, taskRows, allowed, limit, phase, notPlaced,
           out, taskLocLoad, playerLocs, playerTaskLocs, phase1Hints, locById);
@@ -219,14 +204,14 @@ export class AutoPlanService {
   // everyone else; within whales and dolphins higher labyrinth score first
   // (row order breaks ties, unscored last). Each player takes ALL their spots
   // (count) before the next player gets any, so the strongest whale holds the
-  // top-priority buildings. Each pick is the best location by priority +
-  // distance (see pickLocation). No locality limit.
+  // top-priority buildings: their 1st spot is the most important free
+  // building, every further spot the free building closest to the spots they
+  // already hold in this task (priority breaks ties). No locality limit.
   private fillByStrength(
     ctx: AlgoContext, task: TaskTemplate, taskRows: AutoPlanRow[],
     allowed: MapLocation[], limit: number, phase: 1 | 2, notPlaced: NotPlaced[],
     out: Assignment[], taskLocLoad: Map<string, number>,
     playerLocs: Map<string, Set<string>>, playerTaskLocs: Map<string, Set<string>>,
-    phase1Hints: Map<string, string[]>, playerAnchor: Map<string, Point | null>,
   ) {
     const score = (r: AutoPlanRow) => ctx.tierRank(r.playerId) < 2
       ? (ctx.labyrinthScore(r.playerId) ?? -Infinity) : 0;
@@ -239,12 +224,20 @@ export class AutoPlanService {
 
     for (const row of ordered) {
       for (let i = 0; i < row.count; i++) {
-        const anchor = playerAnchor.get(row.playerId) ?? null;
-        const picked = this.pickLocation(
-          task, row.playerId, allowed, limit,
-          taskLocLoad, playerTaskLocs,
-          phase, phase1Hints, anchor,
-        );
+        const mine = playerTaskLocs.get(`${row.playerId}|${task.id}`);
+        const free = allowed.filter(l =>
+          !mine?.has(l.id) && (taskLocLoad.get(`${task.id}|${l.id}`) ?? 0) < limit);
+        // 1st spot: highest priority. Later spots: closest to the player's
+        // spots in this task (free is in priority order, so ties keep it).
+        const c = mine?.size ? this.centroidOf(mine, ctx.locations) : null;
+        let picked = free[0];
+        if (c) {
+          let best = Infinity;
+          for (const l of free) {
+            const d = Math.hypot(l.x - c.x, l.y - c.y);
+            if (d < best) { best = d; picked = l; }
+          }
+        }
         if (!picked) {
           notPlaced.push({
             taskId: task.id, taskName: task.name,
@@ -255,11 +248,6 @@ export class AutoPlanService {
         }
         this.recordPick(out, ctx, task, row.playerId, picked, phase,
                         taskLocLoad, playerLocs, playerTaskLocs);
-        // Seed anchor from the very first pick if this player had no
-        // pre-task locations — later picks then cluster around it (frozen).
-        if (anchor === null) {
-          playerAnchor.set(row.playerId, { x: picked.x, y: picked.y });
-        }
       }
     }
   }
@@ -364,90 +352,11 @@ export class AutoPlanService {
     }
   }
 
-  // Score a candidate using priority + α·distance. Lower score wins.
-  // Priority is the *primary* signal (one priority slot ≈ PRIORITY_DISTANCE
-  // map units of distance). Distance is the tiebreaker — and breaks ties
-  // strongly enough that, e.g., repair_4 vs repair_3 (1 priority apart)
-  // can flip if repair_4 is meaningfully closer to the anchor.
-  //
-  // PRIORITY_DISTANCE chosen so that ~5% of map width = 1 priority slot.
-  // Tuned against the hoc/L1 whale case so that a 14-unit distance gap can
-  // overcome a 3-priority-slot gap (e.g. repair_1 wins over proto_2 because
-  // it's that much closer to boiler) while small distance gaps still defer
-  // to priority.
-  private static readonly PRIORITY_DISTANCE = 5;
-
-  // Phase-2 carryover bonus: hint locations (where this player was placed in
-  // phase 1) get this much shaved off their score so they're preferred over
-  // equally-ranked non-hints. Worth ~1 priority slot — enough to break a
-  // close tie toward "stay where you were", but not enough to override a
-  // clearly-higher-priority empty location.
-  private static readonly HINT_BONUS = 1;
-
   // Locality: max map distance between any two of a player's locations in
   // one phase. ~One building over: Boiler ↔ Repair IV (31) or Transit ↔
   // Repair III (32) fit; Boiler ↔ Transit (74) or Repair I ↔ Repair III (38)
   // don't. Global has no position and is exempt.
   private static readonly MAX_SPREAD = 35;
-
-  // Choose the best location for one slot.
-  //
-  // Score = priorityIndex + dist(loc, anchor) / PRIORITY_DISTANCE
-  //         - HINT_BONUS · (loc is a phase-1 hint for this player+task)
-  //
-  // anchor = centroid of player's pre-task locations (frozen at task entry,
-  // so the score doesn't drift as picks accumulate within the task). If no
-  // pre-task locations exist, the FIRST pick is by priority alone (anchor is
-  // null) and runPhase seeds the anchor from that first pick.
-  //
-  // Phase-2 carryover behaves as a soft preference: hints get a one-priority-
-  // slot discount, so equally-good non-hints lose to a previously-held loc,
-  // but a meaningfully-better non-hint can still win.
-  private pickLocation(
-    task: TaskTemplate,
-    playerId: string,
-    allowed: MapLocation[],
-    limit: number,
-    taskLocLoad: Map<string, number>,
-    playerTaskLocs: Map<string, Set<string>>,
-    phase: 1 | 2,
-    phase1Hints: Map<string, string[]>,
-    anchor: Point | null,
-  ): MapLocation | null {
-    const playerTaskKey = `${playerId}|${task.id}`;
-    const usedByPlayerForTask = playerTaskLocs.get(playerTaskKey) ?? new Set<string>();
-
-    const isAvailable = (loc: MapLocation) => {
-      if (usedByPlayerForTask.has(loc.id)) return false;
-      const load = taskLocLoad.get(`${task.id}|${loc.id}`) ?? 0;
-      return load < limit;
-    };
-
-    const candidates = allowed.filter(isAvailable);
-    if (candidates.length === 0) return null;
-
-    // Priority + distance + hint score. allowed is in priority order; we use
-    // that index as priority rank (smaller = higher priority).
-    const priorityIndex = new Map(allowed.map((l, i) => [l.id, i]));
-    const ALPHA = 1 / AutoPlanService.PRIORITY_DISTANCE;
-    const hintIds = new Set(phase === 2 ? (phase1Hints.get(playerTaskKey) ?? []) : []);
-
-    let best: MapLocation | null = null;
-    let bestScore = Infinity;
-    for (const c of candidates) {
-      const pIdx = priorityIndex.get(c.id) ?? 0;
-      let dist = 0;
-      if (anchor) {
-        const dx = c.x - anchor.x;
-        const dy = c.y - anchor.y;
-        dist = Math.sqrt(dx * dx + dy * dy);
-      }
-      const hintBonus = hintIds.has(c.id) ? AutoPlanService.HINT_BONUS : 0;
-      const score = pIdx + ALPHA * dist - hintBonus;
-      if (score < bestScore) { bestScore = score; best = c; }
-    }
-    return best;
-  }
 
   private centroidOf(ids: Set<string>, pool: MapLocation[]): Point | null {
     const locs = pool.filter(l => ids.has(l.id));
