@@ -163,6 +163,31 @@ export class AutoPlanModal implements OnInit {
     this.mirrorToCache();
   }
 
+  /** One-click fill: append every whale/dolphin ('tiered') or every player
+   *  without a tier ('untiered') who isn't in this task yet, count 1.
+   *  Order: whales before dolphins, then labyrinth score high→low, then name. */
+  addGroup(taskId: string, group: 'tiered' | 'untiered') {
+    const list = this.rowsByTask.get(taskId);
+    if (!list) return;
+    const present = new Set(list.map(r => r.playerId));
+    const tierRank = (p: Player) => p.tier === 'whale' ? 0 : p.tier === 'dolphin' ? 1 : 2;
+    const toAdd = this.data.players
+      .filter(p => !present.has(p.id) && (group === 'tiered' ? !!p.tier : !p.tier))
+      .sort((a, b) =>
+        tierRank(a) - tierRank(b)
+        || (b.labyrinthScore ?? -1) - (a.labyrinthScore ?? -1)
+        || a.inGameName.localeCompare(b.inGameName)
+      );
+    for (const p of toAdd) list.push({ taskId, playerId: p.id, count: 1, uid: this.uid() });
+    this.mirrorToCache();
+  }
+
+  clearRows(taskId: string) {
+    if (!this.rowsByTask.has(taskId)) return;
+    this.rowsByTask.set(taskId, []);
+    this.mirrorToCache();
+  }
+
   rowsFor(taskId: string): RowVM[] {
     return this.rowsByTask.get(taskId) ?? [];
   }
