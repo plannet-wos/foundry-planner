@@ -51,7 +51,10 @@
 .row__player { flex: 1; }
 .row__count  { width: 90px; }
 
-.add-row-btn {
+.add-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 4px;
 }
 

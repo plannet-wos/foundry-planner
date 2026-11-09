@@ -42,9 +42,23 @@
         </button>
       </div>
 
-      <button mat-stroked-button (click)="addRow(task.id)" type="button" class="add-row-btn">
-        <mat-icon>add</mat-icon> Add row
-      </button>
+      <div class="add-row-actions">
+        <button mat-stroked-button (click)="addRow(task.id)" type="button">
+          <mat-icon>add</mat-icon> Add row
+        </button>
+        <button mat-stroked-button (click)="addGroup(task.id, 'tiered')" type="button"
+                title="Add every whale and dolphin not in this task yet">
+          + Whales &amp; dolphins
+        </button>
+        <button mat-stroked-button (click)="addGroup(task.id, 'untiered')" type="button"
+                title="Add every player without a tier not in this task yet">
+          + Everyone else
+        </button>
+        <button mat-button color="warn" (click)="clearRows(task.id)" type="button"
+                *ngIf="rowsFor(task.id).length > 0">
+          Clear
+        </button>
+      </div>
     </div>
   </ng-container>
 
