@@ -350,14 +350,19 @@ export class AutoPlanService {
     // 2nd, and so on up to the task's max — so when there are fewer players
     // than slots they're spread evenly instead of filling the top buildings
     // and leaving the rest empty. (No max → a single pass, unlimited.)
-    // Two passes: first everyone stays within MAX_SPREAD; then the slots
-    // still empty are filled from a wider range (FILL_SPREAD), so a building
-    // reaches its max instead of staying short because nobody nearby is left.
+    // Each level is filled in three steps, so a building reaches it before
+    // any other building goes past it:
+    //   1. players within MAX_SPREAD of their other spots
+    //   2. slots still empty: players within FILL_SPREAD
+    //   3. still short (e.g. Repair I when every player with count left
+    //      already holds it): move a joiner from a building next to the short
+    //      one over, and give their old slot to a player with count left who
+    //      fits there
     const levels = limit === Number.MAX_SAFE_INTEGER ? 1 : limit;
-    for (const spread of [AutoPlanService.MAX_SPREAD, AutoPlanService.FILL_SPREAD]) {
-      max2 = spread ** 2;
-      for (let lv = 1; lv <= levels; lv++) {
-        const level = limit === Number.MAX_SAFE_INTEGER ? limit : lv;
+    for (let lv = 1; lv <= levels; lv++) {
+      const level = limit === Number.MAX_SAFE_INTEGER ? limit : lv;
+      for (const spread of [AutoPlanService.MAX_SPREAD, AutoPlanService.FILL_SPREAD]) {
+        max2 = spread ** 2;
         for (const loc of allowed) {
           const loadKey = `${task.id}|${loc.id}`;
           while ((taskLocLoad.get(loadKey) ?? 0) < level) {
@@ -385,30 +390,26 @@ export class AutoPlanService {
             got.set(best, got.get(best)! + 1);
           }
         }
-  }
-    }
-
-    // Still short (e.g. Repair I when every player with count left already
-    // holds it): move a joiner from a building next to the short one over,
-    // and give their old slot to a player with count left who fits there.
-    for (const loc of allowed) {
-      const loadKey = `${task.id}|${loc.id}`;
-      while ((taskLocLoad.get(loadKey) ?? 0) < limit) {
-        const swap = this.findSwap(task, loc, allowed, players, got, want,
-                                   out, phase, playerLocs, playerTaskLocs, locById, max2);
-        if (!swap) break;
-        const { mover, from, filler } = swap;
-        const i = out.findIndex(a => a.phase === phase && a.taskId === task.id
-          && a.playerId === mover && a.locationId === from.id);
-        out.splice(i, 1);
-        taskLocLoad.set(`${task.id}|${from.id}`, taskLocLoad.get(`${task.id}|${from.id}`)! - 1);
-        playerTaskLocs.get(`${mover}|${task.id}`)!.delete(from.id);
-        if (!out.some(a => a.phase === phase && a.playerId === mover && a.locationId === from.id)) {
-          playerLocs.get(mover)!.delete(from.id);
+      }
+      for (const loc of allowed) {
+        const loadKey = `${task.id}|${loc.id}`;
+        while ((taskLocLoad.get(loadKey) ?? 0) < level) {
+          const swap = this.findSwap(task, loc, allowed, players, got, want,
+                                     out, phase, playerLocs, playerTaskLocs, locById, max2);
+          if (!swap) break;
+          const { mover, from, filler } = swap;
+          const i = out.findIndex(a => a.phase === phase && a.taskId === task.id
+            && a.playerId === mover && a.locationId === from.id);
+          out.splice(i, 1);
+          taskLocLoad.set(`${task.id}|${from.id}`, taskLocLoad.get(`${task.id}|${from.id}`)! - 1);
+          playerTaskLocs.get(`${mover}|${task.id}`)!.delete(from.id);
+          if (!out.some(a => a.phase === phase && a.playerId === mover && a.locationId === from.id)) {
+            playerLocs.get(mover)!.delete(from.id);
+          }
+          this.recordPick(out, ctx, task, mover, loc, phase, taskLocLoad, playerLocs, playerTaskLocs);
+          this.recordPick(out, ctx, task, filler, from, phase, taskLocLoad, playerLocs, playerTaskLocs);
+          got.set(filler, got.get(filler)! + 1);
         }
-        this.recordPick(out, ctx, task, mover, loc, phase, taskLocLoad, playerLocs, playerTaskLocs);
-        this.recordPick(out, ctx, task, filler, from, phase, taskLocLoad, playerLocs, playerTaskLocs);
-        got.set(filler, got.get(filler)! + 1);
       }
     }
 
