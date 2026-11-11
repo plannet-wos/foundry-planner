@@ -190,3 +190,47 @@ describe('AutoPlanService spreading and locality', () => {
   });
 });
 
+
+describe('AutoPlanService filling grouped buildings to their max', () => {
+  let service: AutoPlanService;
+  // West, middle and east, on one line: W–M 30, M–E 35, W–E 65.
+  const MAP: MapLocation[] = [
+    { id: 'W', name: 'W', x: 10, y: 50, type: 'outer', phases: [1, 2] },
+    { id: 'M', name: 'M', x: 40, y: 50, type: 'outer', phases: [1, 2] },
+    { id: 'E', name: 'E', x: 75, y: 50, type: 'outer', phases: [1, 2] },
+  ];
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [{ provide: PlanService, useValue: { MAP_LOCATIONS: MAP } }],
+    });
+    service = TestBed.inject(AutoPlanService);
+  });
+
+  function phase1(rows: AutoPlanRow[], tasks: TaskTemplate[]) {
+    const r = service.generate({ allianceId: 'a', legion: 1, rows, tasks, playerName: id => id });
+    return r.proposed.filter(a => a.phase === 1).map(a => `${a.taskId}:${a.playerId}@${a.locationId}`).sort();
+  }
+
+  it('fills a slot nobody within the normal range can take from a bit further away', () => {
+    // Move M so W–M is 40: past the normal range (35), within the fill-up's.
+    const JOIN: TaskTemplate = { id: 'join', allianceId: 'a', name: 'Joiner', order: 0,
+      maxPlayersPerLocation: 1, priorityLocationIds: ['W', 'M'] };
+    service['planService'].MAP_LOCATIONS[1] = { ...MAP[1], x: 50 };
+    expect(phase1([{ taskId: 'join', playerId: 'p', count: 2 }], [JOIN])).toEqual(['join:p@M', 'join:p@W']);
+    service['planService'].MAP_LOCATIONS[1] = MAP[1];
+  });
+
+  it('swaps a joiner over when the only player with count left is too far away', () => {
+    const CAP: TaskTemplate = { id: 'cap', allianceId: 'a', name: 'Captain', order: 0,
+      maxPlayersPerLocation: 1, priorityLocationIds: ['E', 'W'], rankByStrength: true };
+    const JOIN: TaskTemplate = { id: 'join', allianceId: 'a', name: 'Joiner', order: 1,
+      maxPlayersPerLocation: 1, priorityLocationIds: ['M', 'W'] };
+    // f captains E, m captains W. m (30 away) takes the M joiner slot, which
+    // leaves W to f, 65 away from E. Swap: m joins at W, f at M.
+    expect(phase1([
+      { taskId: 'cap', playerId: 'f', count: 1 }, { taskId: 'cap', playerId: 'm', count: 1 },
+      { taskId: 'join', playerId: 'm', count: 1 }, { taskId: 'join', playerId: 'f', count: 1 },
+    ], [CAP, JOIN])).toEqual(['cap:f@E', 'cap:m@W', 'join:f@M', 'join:m@W']);
+  });
+});

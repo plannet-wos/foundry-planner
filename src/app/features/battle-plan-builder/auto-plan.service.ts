@@ -58,7 +58,8 @@ interface AlgoContext {
  *    if their own task can't place them) — see the end of runPhase
  *  - other tasks (joiners): grouped fill — each player's spots stay within
  *    MAX_SPREAD of each other, the work is shared, and phase 1 locations are
- *    preferred again in phase 2 — see fillGrouped
+ *    preferred again in phase 2; slots still empty are then filled from
+ *    FILL_SPREAD, or by swapping a nearby joiner over — see fillGrouped
  *  - teleport pseudo-task: highest-priority `playerAtLocation` slot per
  *    player, else nearest workshop to the player's centroid
  */
@@ -334,7 +335,7 @@ export class AutoPlanService {
       if (fill >= totalSlots) { target = t; break; }
     }
 
-    const max2 = AutoPlanService.MAX_SPREAD ** 2;
+    let max2 = AutoPlanService.MAX_SPREAD ** 2;
     const spotsOf = (p: string) => Array.from(playerLocs.get(p) ?? [])
       .map(id => locById.get(id))
       .filter((l): l is MapLocation => !!l && l.type !== 'global');
@@ -349,39 +350,66 @@ export class AutoPlanService {
     // 2nd, and so on up to the task's max — so when there are fewer players
     // than slots they're spread evenly instead of filling the top buildings
     // and leaving the rest empty. (No max → a single pass, unlimited.)
+    // Two passes: first everyone stays within MAX_SPREAD; then the slots
+    // still empty are filled from a wider range (FILL_SPREAD), so a building
+    // reaches its max instead of staying short because nobody nearby is left.
     const levels = limit === Number.MAX_SAFE_INTEGER ? 1 : limit;
-    for (let lv = 1; lv <= levels; lv++) {
-      const level = limit === Number.MAX_SAFE_INTEGER ? limit : lv;
-      let added = false;
-      for (const loc of allowed) {
-        const loadKey = `${task.id}|${loc.id}`;
-        while ((taskLocLoad.get(loadKey) ?? 0) < level) {
-          const eligible = players.filter(p =>
-            got.get(p)! < want.get(p)!
-            && !(playerTaskLocs.get(`${p}|${task.id}`)?.has(loc.id))
-            && isNear(loc, p));
-          if (eligible.length === 0) break;
-          const key = (p: string): number[] => [
-            got.get(p)! >= target ? 1 : 0,
-            spotsOf(p).length > 0 ? 0 : 1,
-            phase === 2 && (phase1Hints.get(`${p}|${task.id}`) ?? []).includes(loc.id) ? 0 : 1,
-            distTo(loc, p),
-            rowIndex.get(p)!,
-          ];
-          let best = eligible[0];
-          let bestKey = key(best);
-          for (const p of eligible.slice(1)) {
-            const k = key(p);
-            const i = k.findIndex((v, j) => v !== bestKey[j]);
-            if (i >= 0 && k[i] < bestKey[i]) { best = p; bestKey = k; }
+    for (const spread of [AutoPlanService.MAX_SPREAD, AutoPlanService.FILL_SPREAD]) {
+      max2 = spread ** 2;
+      for (let lv = 1; lv <= levels; lv++) {
+        const level = limit === Number.MAX_SAFE_INTEGER ? limit : lv;
+        for (const loc of allowed) {
+          const loadKey = `${task.id}|${loc.id}`;
+          while ((taskLocLoad.get(loadKey) ?? 0) < level) {
+            const eligible = players.filter(p =>
+              got.get(p)! < want.get(p)!
+              && !(playerTaskLocs.get(`${p}|${task.id}`)?.has(loc.id))
+              && isNear(loc, p));
+            if (eligible.length === 0) break;
+            const key = (p: string): number[] => [
+              got.get(p)! >= target ? 1 : 0,
+              spotsOf(p).length > 0 ? 0 : 1,
+              phase === 2 && (phase1Hints.get(`${p}|${task.id}`) ?? []).includes(loc.id) ? 0 : 1,
+              distTo(loc, p),
+              rowIndex.get(p)!,
+            ];
+            let best = eligible[0];
+            let bestKey = key(best);
+            for (const p of eligible.slice(1)) {
+              const k = key(p);
+              const i = k.findIndex((v, j) => v !== bestKey[j]);
+              if (i >= 0 && k[i] < bestKey[i]) { best = p; bestKey = k; }
+            }
+            this.recordPick(out, ctx, task, best, loc, phase,
+                            taskLocLoad, playerLocs, playerTaskLocs);
+            got.set(best, got.get(best)! + 1);
           }
-          this.recordPick(out, ctx, task, best, loc, phase,
-                          taskLocLoad, playerLocs, playerTaskLocs);
-          got.set(best, got.get(best)! + 1);
-          added = true;
         }
+  }
+    }
+
+    // Still short (e.g. Repair I when every player with count left already
+    // holds it): move a joiner from a building next to the short one over,
+    // and give their old slot to a player with count left who fits there.
+    for (const loc of allowed) {
+      const loadKey = `${task.id}|${loc.id}`;
+      while ((taskLocLoad.get(loadKey) ?? 0) < limit) {
+        const swap = this.findSwap(task, loc, allowed, players, got, want,
+                                   out, phase, playerLocs, playerTaskLocs, locById, max2);
+        if (!swap) break;
+        const { mover, from, filler } = swap;
+        const i = out.findIndex(a => a.phase === phase && a.taskId === task.id
+          && a.playerId === mover && a.locationId === from.id);
+        out.splice(i, 1);
+        taskLocLoad.set(`${task.id}|${from.id}`, taskLocLoad.get(`${task.id}|${from.id}`)! - 1);
+        playerTaskLocs.get(`${mover}|${task.id}`)!.delete(from.id);
+        if (!out.some(a => a.phase === phase && a.playerId === mover && a.locationId === from.id)) {
+          playerLocs.get(mover)!.delete(from.id);
+        }
+        this.recordPick(out, ctx, task, mover, loc, phase, taskLocLoad, playerLocs, playerTaskLocs);
+        this.recordPick(out, ctx, task, filler, from, phase, taskLocLoad, playerLocs, playerTaskLocs);
+        got.set(filler, got.get(filler)! + 1);
       }
-      if (!added) break;
     }
 
     const anyFree = allowed.some(l => (taskLocLoad.get(`${task.id}|${l.id}`) ?? 0) < limit);
@@ -399,11 +427,44 @@ export class AutoPlanService {
     }
   }
 
+  // A swap that fills `loc`: `mover` holds `from` (same task) and could sit
+  // at `loc` instead, and `filler` has count left and fits at `from`. All
+  // within `max2` (squared spread) of the player's other spots this phase.
+  private findSwap(
+    task: TaskTemplate, loc: MapLocation, allowed: MapLocation[],
+    players: string[], got: Map<string, number>, want: Map<string, number>,
+    out: Assignment[], phase: 1 | 2,
+    playerLocs: Map<string, Set<string>>, playerTaskLocs: Map<string, Set<string>>,
+    locById: Map<string, MapLocation>, max2: number,
+  ): { mover: string; from: MapLocation; filler: string } | null {
+    const fits = (l: MapLocation, p: string, without?: string) => l.type === 'global'
+      || Array.from(playerLocs.get(p) ?? [])
+        .filter(id => id !== without || out.some(a => a.phase === phase
+          && a.playerId === p && a.locationId === id && a.taskId !== task.id))
+        .map(id => locById.get(id))
+        .every(m => !m || m.type === 'global' || (l.x - m.x) ** 2 + (l.y - m.y) ** 2 <= max2);
+    const holds = (p: string, l: MapLocation) => !!playerTaskLocs.get(`${p}|${task.id}`)?.has(l.id);
+    const fillers = players.filter(p => got.get(p)! < want.get(p)! && !holds(p, loc));
+    for (const from of allowed) {
+      if (from.id === loc.id) continue;
+      const filler = fillers.find(p => !holds(p, from) && fits(from, p));
+      if (!filler) continue;
+      const mover = players.find(p => p !== filler && holds(p, from) && !holds(p, loc)
+        && fits(loc, p, from.id));
+      if (mover) return { mover, from, filler };
+    }
+    return null;
+  }
+
   // Locality: max map distance between any two of a player's locations in
   // one phase. ~One building over: Boiler ↔ Repair IV (31) or Transit ↔
   // Repair III (32) fit; Boiler ↔ Transit (74) or Repair I ↔ Repair III (38)
   // don't. Global has no position and is exempt.
   private static readonly MAX_SPREAD = 35;
+  // Fill-up range for slots the MAX_SPREAD pass left empty. Also lets Repair I
+  // ↔ Repair III (38), Forge ↔ any outer building (35–41) or Repair II ↔
+  // Repair IV (39) share a player; still not Boiler ↔ Transit (74).
+  private static readonly FILL_SPREAD = 45;
 
   private centroidOf(ids: Set<string>, pool: MapLocation[]): Point | null {
     const locs = pool.filter(l => ids.has(l.id));
