@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, Inject, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -52,6 +52,8 @@ export class AutoPlanModal implements OnInit {
   private planService = inject(PlanService);
   private autoPlan    = inject(AutoPlanService);
   private snackBar    = inject(MatSnackBar);
+  // Zoneless: state set after an await doesn't re-render on its own.
+  private cdr         = inject(ChangeDetectorRef);
 
   // Editable tasks (excludes teleport), sorted by library order.
   editableTasks: TaskTemplate[] = [];
@@ -126,6 +128,7 @@ export class AutoPlanModal implements OnInit {
       if (!list) continue;
       list.push({ ...r, uid: this.uid() });
     }
+    this.cdr.markForCheck();
   }
 
   /** Persist current form to localStorage. Called on every row change so
@@ -235,6 +238,7 @@ export class AutoPlanModal implements OnInit {
       this.snackBar.open('Save failed', 'Close', { duration: 3000 });
     } finally {
       this.saving = false;
+      this.cdr.markForCheck();
     }
   }
 
