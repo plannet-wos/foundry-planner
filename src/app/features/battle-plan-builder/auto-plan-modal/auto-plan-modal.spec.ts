@@ -45,10 +45,20 @@ describe('AutoPlanModal one-click rows', () => {
     expect(modal.rowsFor('cap').every(r => r.count === 1)).toBe(true);
   });
 
-  it('adds everyone without a tier, and skips players already in the task', () => {
+  it('counts up instead of adding duplicates when pressed again', () => {
+    modal.addGroup('cap', 'untiered');
     modal.addGroup('cap', 'untiered');
     modal.addGroup('cap', 'untiered');
     expect(ids()).toEqual(['joinerA', 'joinerB']);
+    expect(modal.rowsFor('cap').map(r => r.count)).toEqual([3, 3]);
+  });
+
+  it('only counts up the pressed group, and adds newcomers with 1', () => {
+    modal.addGroup('cap', 'tiered');
+    modal.addGroup('cap', 'untiered');
+    modal.addGroup('cap', 'untiered');
+    const count = Object.fromEntries(modal.rowsFor('cap').map(r => [r.playerId, r.count]));
+    expect(count).toEqual({ whale: 1, highDolphin: 1, lowDolphin: 1, joinerA: 2, joinerB: 2 });
   });
 
   it('clears a task', () => {
