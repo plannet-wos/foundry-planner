@@ -169,10 +169,21 @@ export class AutoPlanModal implements OnInit {
   addGroup(taskId: string, group: 'tiered' | 'untiered') {
     const list = this.rowsByTask.get(taskId);
     if (!list) return;
-    const present = new Set(list.map(r => r.playerId));
+    const inGroup = (p: Player) => group === 'tiered' ? !!p.tier : !p.tier;
+    // Pressing again counts up: everyone in the group already in this task
+    // gets one more spot (one row per player is bumped), then any newcomers
+    // are added with 1.
+    const groupIds = new Set(this.data.players.filter(inGroup).map(p => p.id));
+    const bumped = new Set<string>();
+    for (const r of list) {
+      if (groupIds.has(r.playerId) && !bumped.has(r.playerId)) {
+        r.count = (r.count ?? 0) + 1;
+        bumped.add(r.playerId);
+      }
+    }
     const tierRank = (p: Player) => p.tier === 'whale' ? 0 : p.tier === 'dolphin' ? 1 : 2;
     const toAdd = this.data.players
-      .filter(p => !present.has(p.id) && (group === 'tiered' ? !!p.tier : !p.tier))
+      .filter(p => !bumped.has(p.id) && inGroup(p))
       .sort((a, b) =>
         tierRank(a) - tierRank(b)
         || (b.labyrinthScore ?? -1) - (a.labyrinthScore ?? -1)

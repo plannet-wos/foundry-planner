@@ -47,11 +47,11 @@
           <mat-icon>add</mat-icon> Add row
         </button>
         <button mat-stroked-button (click)="addGroup(task.id, 'tiered')" type="button"
-                title="Add every whale and dolphin not in this task yet">
+                title="Add every whale and dolphin; press again to give each one more spot">
           + Whales &amp; dolphins
         </button>
         <button mat-stroked-button (click)="addGroup(task.id, 'untiered')" type="button"
-                title="Add every player without a tier not in this task yet">
+                title="Add every player without a tier; press again to give each one more spot">
           + Everyone else
         </button>
         <button mat-button color="warn" (click)="clearRows(task.id)" type="button"
