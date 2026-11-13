@@ -8,7 +8,34 @@
   display: flex;
   gap: 16px;
   flex-wrap: wrap;
+  align-items: center;
   margin-bottom: 16px;
+}
+
+.player-filter {
+  margin-bottom: 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  &__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    max-height: 320px;
+    overflow-y: auto;
+  }
+
+  &__score {
+    color: #757575;
+    font-size: 12px;
+    margin-left: 4px;
+  }
 }
 
 .map-panel {

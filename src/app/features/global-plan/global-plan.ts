@@ -1,4 +1,5 @@
-import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -6,6 +7,8 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatButtonModule } from '@angular/material/button';
 import { MapViewer } from '../../shared/map-viewer/map-viewer';
 import { allianceId as resolveAllianceId } from '../../core/models/alliance.model';
 import { Observable, combineLatest, BehaviorSubject, from } from 'rxjs';
@@ -19,7 +22,8 @@ import { Player } from '../../core/models/player.model';
 @Component({
   selector: 'app-global-plan',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatButtonToggleModule, MatIconModule, MatListModule, MapViewer],
+  imports: [CommonModule, FormsModule, MatCardModule, MatButtonToggleModule, MatIconModule, MatListModule,
+            MatCheckboxModule, MatButtonModule, MapViewer],
   templateUrl: './global-plan.html',
   styleUrl: './global-plan.scss'
 })
@@ -29,6 +33,7 @@ export class GlobalPlan implements OnInit {
   private allianceService = inject(AllianceService);
   private route           = inject(ActivatedRoute);
   private cdr             = inject(ChangeDetectorRef);
+  private destroyRef      = inject(DestroyRef);
 
   private readonly PHASE_1_LOCKED = new Set([
     'loc_mercenary', 'loc_forge', 'loc_munitions',
@@ -51,6 +56,14 @@ export class GlobalPlan implements OnInit {
   locationAssignments$!: Observable<{ location: MapLocation; taskGroups: { taskName: string; players: string[] }[]; hasTeleport: boolean }[]>;
 
   readonly selectedLocationId$ = new BehaviorSubject<string | null>(null);
+
+  /** Player filter: null = off (everyone); otherwise only these players'
+   *  assignments are shown, and the map shows only their buildings, like
+   *  the personal plan. */
+  readonly playerFilter$ = new BehaviorSubject<Set<string> | null>(null);
+  /** Roster for the filter list, labyrinth score high → low. */
+  sortedPlayers$!: Observable<Player[]>;
+  private allPlayerIds: string[] = [];
   selectedLocationAssignments$!: Observable<{
     locationName: string;
     phases: { phase: 1 | 2; taskGroups: { taskName: string; taskColor: string; players: string[] }[] }[];
@@ -72,8 +85,24 @@ export class GlobalPlan implements OnInit {
       ? from(this.playerService.getPlayersForStateEvent(alliance.stateId, allianceId, alliance.selection?.playerIds))
       : this.playerService.getPlayersByAlliance(allianceId);
 
+    this.sortedPlayers$ = this.players$.pipe(
+      map(players => {
+        return [...players].sort((a, b) =>
+          (b.labyrinthScore ?? -1) - (a.labyrinthScore ?? -1)
+          || a.inGameName.localeCompare(b.inGameName));
+      })
+    );
+    // Kept up to date even while the list is hidden, so ticking "Filter
+    // players" can start with everyone selected.
+    this.players$.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(players => this.allPlayerIds = players.map(p => p.id));
+
+    const visible$ = combineLatest([this.assignments$, this.playerFilter$]).pipe(
+      map(([assignments, only]) => only ? assignments.filter(a => only.has(a.playerId)) : assignments)
+    );
+
     this.selectedLocationAssignments$ = combineLatest([
-      this.assignments$, this.tasks$, this.players$, this.globalLegion$, this.selectedLocationId$
+      visible$, this.tasks$, this.players$, this.globalLegion$, this.selectedLocationId$
     ]).pipe(
       map(([assignments, tasks, players, legion, locId]) => {
         if (!locId) return null;
@@ -122,11 +151,14 @@ export class GlobalPlan implements OnInit {
     );
 
     this.locationAssignments$ = combineLatest([
-      this.assignments$, this.tasks$, this.players$, this.globalPhase$, this.globalLegion$
+      visible$, this.tasks$, this.players$, this.globalPhase$, this.globalLegion$, this.playerFilter$
     ]).pipe(
-      map(([assignments, tasks, players, phase, legion]) =>
+      map(([assignments, tasks, players, phase, legion, only]) =>
         this.locations
           .filter(loc => phase === 2 || !this.PHASE_1_LOCKED.has(loc.id))
+          // Filtering: like the personal plan, only buildings they're at.
+          .filter(loc => !only || assignments.some(a =>
+            a.locationId === loc.id && a.phase === phase && a.legion === legion))
           .map(loc => {
             const locAssignments = assignments.filter(a =>
               a.locationId === loc.id && a.phase === phase && a.legion === legion
@@ -162,6 +194,26 @@ export class GlobalPlan implements OnInit {
     this.globalLegion = legion;
     this.globalLegion$.next(legion);
   }
+
+  // ── Player filter ──────────────────────────────────────────────────────
+
+  get filterOn(): boolean { return this.playerFilter$.getValue() !== null; }
+
+  setFilterOn(on: boolean) {
+    this.playerFilter$.next(on ? new Set(this.allPlayerIds) : null);
+  }
+
+  isShown(id: string): boolean { return !!this.playerFilter$.getValue()?.has(id); }
+
+  toggleShown(id: string, on: boolean) {
+    const next = new Set(this.playerFilter$.getValue() ?? []);
+    if (on) next.add(id); else next.delete(id);
+    this.playerFilter$.next(next);
+  }
+
+  /** Reset = everyone selected; Clear = nobody. */
+  selectAllPlayers() { this.playerFilter$.next(new Set(this.allPlayerIds)); }
+  clearPlayers()     { this.playerFilter$.next(new Set()); }
 
   selectLocation(locationId: string) {
     this.selectedLocationId$.next(

@@ -18,7 +18,25 @@
           <mat-button-toggle [value]="1">Phase 1</mat-button-toggle>
           <mat-button-toggle [value]="2">Phase 2</mat-button-toggle>
         </mat-button-toggle-group>
+        <mat-checkbox [checked]="filterOn" (change)="setFilterOn($event.checked)">Filter players</mat-checkbox>
       </div>
+
+      @if (filterOn) {
+        <div class="player-filter">
+          <div class="player-filter__actions">
+            <button mat-stroked-button type="button" (click)="selectAllPlayers()">Reset</button>
+            <button mat-stroked-button type="button" (click)="clearPlayers()">Clear</button>
+          </div>
+          <div class="player-filter__list">
+            @for (p of sortedPlayers$ | async; track p.id) {
+              <mat-checkbox [checked]="isShown(p.id)" (change)="toggleShown(p.id, $event.checked)">
+                {{ p.inGameName }}
+                @if (p.labyrinthScore != null) { <span class="player-filter__score">{{ p.labyrinthScore }}</span> }
+              </mat-checkbox>
+            }
+          </div>
+        </div>
+      }
 
       <div class="map-panel">
         <app-map-viewer>
